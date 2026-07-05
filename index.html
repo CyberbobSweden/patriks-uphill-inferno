@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patriks Uphill Inferno</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; overflow: hidden; background: #1a2a1a;
+    font-family: 'Segoe UI', Arial, sans-serif; touch-action: none;
+  }
+  #game { display: block; width: 100vw; height: 100vh; }
+  #hud {
+    position: fixed; top: 10px; left: 10px; color: #fff;
+    text-shadow: 0 0 4px #000, 0 0 4px #000; font-size: 18px; z-index: 5;
+  }
+  #gameTitle {
+    position: fixed; top: 10px; right: 14px; color: #ffb703; font-size: 20px;
+    font-weight: bold; text-shadow: 0 0 6px #000, 0 0 10px #c1121f;
+    z-index: 5; letter-spacing: 1px;
+  }
+  #versionInfo {
+    position: fixed; top: 34px; right: 14px; color: #ddd; font-size: 12px;
+    text-shadow: 0 0 4px #000; z-index: 5; text-align: right;
+  }
+  #staminaWrap {
+    position: fixed; top: 40px; left: 10px; width: 220px; height: 18px;
+    background: rgba(0,0,0,0.4); border: 2px solid #222; border-radius: 4px;
+    overflow: hidden; z-index: 5;
+  }
+  #staminaBar {
+    height: 100%; width: 100%; background: #4caf50;
+    transition: width 0.1s linear, background-color 0.2s linear;
+  }
+  #staminaLabel {
+    position: fixed; top: 40px; left: 240px; color: #fff; font-size: 13px;
+    text-shadow: 0 0 4px #000; z-index: 5; line-height: 18px;
+  }
+  #msg {
+    position: fixed; top: 45%; left: 50%; transform: translate(-50%,-50%);
+    color: #fff; font-size: 28px; text-shadow: 0 0 6px #000; z-index: 10;
+    text-align: center; display: none;
+  }
+  #controls {
+    position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
+    color: #ddd; font-size: 13px; text-shadow: 0 0 4px #000; z-index: 5; text-align:center;
+  }
+  #musicToggle {
+    position: fixed; bottom: 10px; right: 14px; z-index: 6;
+    background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #666;
+    border-radius: 6px; padding: 6px 10px; font-size: 13px; cursor: pointer;
+  }
+
+  /* ---------- Start screen ---------- */
+  #startScreen {
+    position: fixed; inset: 0; z-index: 20;
+    background: radial-gradient(ellipse at center, #2b1a0f 0%, #0d0704 100%);
+    color: #fff; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center; font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  #startScreen h1 {
+    font-size: 42px; color: #ffb703; margin: 0 0 4px 0;
+    text-shadow: 0 0 10px #c1121f, 0 0 22px #c1121f;
+    letter-spacing: 1px;
+  }
+  #startScreen .subtitle { color: #bbb; margin-bottom: 28px; font-size: 14px; }
+  .startPanel {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px; padding: 20px 28px; margin-bottom: 22px; min-width: 280px;
+  }
+  .startPanel h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #ffb703; margin: 0 0 14px 0; }
+  .settingRow { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 10px 0; font-size: 14px; }
+  .settingRow input[type="range"] { width: 150px; }
+  #startBtn {
+    background: linear-gradient(180deg, #ff9500, #c1121f); color: #fff; border: none;
+    font-size: 20px; font-weight: bold; padding: 14px 42px; border-radius: 8px;
+    cursor: pointer; letter-spacing: 1px; box-shadow: 0 4px 14px rgba(193,18,31,0.5);
+  }
+  #startBtn:hover { filter: brightness(1.1); }
+  #startCredits { margin-top: 20px; font-size: 12px; color: #888; }
+</style>
+</head>
+<body>
+
+<!-- ---------- Start / settings screen ---------- -->
+<div id="startScreen">
+  <h1>🔥 PATRIKS UPHILL INFERNO</h1>
+  <div class="subtitle">Fysikbaserad uppförsbacke-utmaning</div>
+
+  <div class="startPanel">
+    <h2>Ljudinställningar</h2>
+    <div class="settingRow">
+      <label for="musicToggleStart">Bakgrundsmusik</label>
+      <input type="checkbox" id="musicToggleStart" checked>
+    </div>
+    <div class="settingRow">
+      <label for="musicVolume">Volym</label>
+      <input type="range" id="musicVolume" min="0" max="100" value="50">
+    </div>
+  </div>
+
+  <button id="startBtn">STARTA</button>
+  <div id="startCredits">v<span id="versionStart"></span> · av Cyberbob &amp; Risingbob</div>
+</div>
+
+<canvas id="game"></canvas>
+<div id="hud">Tid: <span id="time">0.0</span>s</div>
+<div id="gameTitle">🔥 PATRIKS UPHILL INFERNO</div>
+<div id="versionInfo"></div>
+<div id="staminaWrap"><div id="staminaBar"></div></div>
+<div id="staminaLabel">Ork: <span id="staminaPct">100</span>%</div>
+<div id="msg"></div>
+<div id="controls">← Broms / Baklänges &nbsp;|&nbsp; → Gasa &nbsp;|&nbsp; ↑ Luta bakåt (wheelie) &nbsp;|&nbsp; ↓ Luta framåt &nbsp;|&nbsp; SHIFT Stå upp (mer kraft, mer ork) &nbsp;|&nbsp; R Starta om</div>
+<button id="musicToggle">🔊 Musik</button>
+
+<audio id="bgMusic" src="assets/audio/bgmusic.mp3" loop preload="auto"></audio>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+window.addEventListener('resize', resize); resize();
+
+// ---------- Version / Credits ----------
+// Höj VERSION varje gång ni gör en ändring så syns det i spelet att det är
+// en ny build. Lägg en rad i CHANGELOG.md också (senaste först).
+const VERSION = '1.2.0';
+const CREDITS = 'Cyberbob & Risingbob';
+const CHANGELOG = [
+  '1.2.0 – Startskärm med ljudinställningar, bakgrundsmusik (loop), musik-knapp i spelet',
+  '1.1.0 – Ork-system: dränering i uppförsbacke, SHIFT-boost, bonk-effekt',
+  '1.0.0 – Första spelbara versionen: fysik, terräng, krasch'
+];
+document.getElementById('versionInfo').innerHTML = `v${VERSION} &middot; by ${CREDITS}`;
+document.getElementById('versionStart').textContent = VERSION;
+console.log(`Patriks Uphill Inferno v${VERSION}\n` + CHANGELOG.join('\n'));
+
+// ---------- Audio ----------
+const bgMusic = document.getElementById('bgMusic');
+const musicToggleStart = document.getElementById('musicToggleStart');
+const musicVolume = document.getElementById('musicVolume');
+const musicToggle = document.getElementById('musicToggle');
+
+// Läs sparade inställningar (om spelaren varit här förut)
+const savedVol = localStorage.getItem('pui_volume');
+const savedMusicOn = localStorage.getItem('pui_musicOn');
+if (savedVol !== null) musicVolume.value = savedVol;
+if (savedMusicOn !== null) musicToggleStart.checked = savedMusicOn === 'true';
+bgMusic.volume = musicVolume.value / 100;
+
+function applyMusicSettings(){
+  bgMusic.volume = musicVolume.value / 100;
+  localStorage.setItem('pui_volume', musicVolume.value);
+  localStorage.setItem('pui_musicOn', musicToggleStart.checked);
+  musicToggle.textContent = musicToggleStart.checked ? '🔊 Musik' : '🔇 Musik';
+  if (musicToggleStart.checked){
+    bgMusic.play().catch(()=>{});
+  } else {
+    bgMusic.pause();
+  }
+}
+musicVolume.addEventListener('input', applyMusicSettings);
+musicToggleStart.addEventListener('change', applyMusicSettings);
+musicToggle.addEventListener('click', () => {
+  musicToggleStart.checked = !musicToggleStart.checked;
+  applyMusicSettings();
+});
+
+// ---------- Start screen -> game ----------
+document.getElementById('startBtn').addEventListener('click', () => {
+  applyMusicSettings(); // starta/pausa musik enligt val, och lås upp audio-autoplay
+  document.getElementById('startScreen').style.display = 'none';
+  lastT = performance.now();
+});
+
+// ---------- Load assets ----------
+const bikeImg = new Image(); bikeImg.src = 'assets/bike_idle.png';
+const crashImg = new Image(); crashImg.src = 'assets/crash1.png';
+const bgImg = new Image(); bgImg.src = 'assets/bg_day.png';
+const tileImg = new Image(); tileImg.src = 'assets/terrain_tile.png';
+
+let tilePattern = null;
+tileImg.onload = () => { tilePattern = ctx.createPattern(tileImg, 'repeat'); };
+
+// ---------- Terrain ----------
+const TRACK_LENGTH = 8000;
+function groundY(x){
+  if (x < 300) return 500;
+  let y = 500;
+  y -= Math.sin(x*0.0025) * 60;
+  y -= Math.sin(x*0.0009 + 1.3) * 120;
+  y -= Math.sin(x*0.006 + 2.0) * 25;
+  const rampCenters = [1800, 3600, 5400, 7000];
+  for (const c of rampCenters){
+    const d = x - c;
+    if (d > -120 && d < 120){
+      y -= Math.max(0, 140 - Math.abs(d)*1.1);
+    }
+  }
+  return y;
+}
+function groundSlope(x){
+  const h = 4;
+  return (groundY(x+h) - groundY(x-h)) / (2*h);
+}
+
+// ---------- Bike physics state ----------
+const WHEEL_BASE = 46;
+let state = {};
+function resetState(){
+  state = {
+    x: 150, y: groundY(150) - 40,
+    vx: 0, vy: 0,
+    angle: 0, angVel: 0,
+    onGround: true,
+    crashed: false,
+    time: 0,
+    running: true,
+    stamina: 100,
+    standing: false
+  };
+  document.getElementById('msg').style.display = 'none';
+}
+resetState();
+
+// ---------- Input ----------
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'KeyR') resetState();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ---------- Camera ----------
+let camX = 0;
+
+// ---------- Main loop ----------
+let lastT = performance.now();
+function loop(now){
+  const dt = Math.min((now - lastT)/1000, 1/30);
+  lastT = now;
+  const startVisible = document.getElementById('startScreen').style.display !== 'none';
+  if (!startVisible && state.running) update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+function update(dt){
+  if (!state.crashed) state.time += dt;
+
+  const GRAVITY = 1400;
+  const ACCEL = 900;
+  const BRAKE = 700;
+  const MAX_SPEED = 620;
+  const AIR_ROTATE_SPEED = 3.4;
+
+  // ---- Stamina tuning ----
+  const STAMINA_DRAIN_BASE = 5;
+  const STAMINA_DRAIN_SLOPE = 30;
+  const STAMINA_REGEN_BASE = 12;
+  const STAMINA_REGEN_DOWNHILL = 22;
+  const STANDING_POWER_MULT = 1.4;
+  const STANDING_DRAIN_MULT = 2.3;
+  const STANDING_MIN_STAMINA = 12;
+
+  if (state.crashed){
+    state.vx *= 0.9;
+    state.angVel *= 0.9;
+    state.vy += GRAVITY*dt;
+    state.y += state.vy*dt;
+    const gy = groundY(state.x);
+    if (state.y > gy - 20){ state.y = gy - 20; state.vy = 0; }
+    return;
+  }
+
+  const currentSlope = groundSlope(state.x);
+  const climbSteepness = Math.max(0, -currentSlope);
+
+  const wantsStand = (keys['ShiftLeft'] || keys['ShiftRight']) && state.stamina > STANDING_MIN_STAMINA;
+  state.standing = wantsStand && keys['ArrowRight'];
+
+  if (keys['ArrowRight']) {
+    const powerMult = Math.max(0.35, Math.min(1, state.stamina / 35));
+    const standMult = state.standing ? STANDING_POWER_MULT : 1;
+    state.vx += ACCEL * powerMult * standMult * dt;
+
+    if (state.onGround){
+      const drain = STAMINA_DRAIN_BASE * (1 + climbSteepness * STAMINA_DRAIN_SLOPE)
+                    * (state.standing ? STANDING_DRAIN_MULT : 1);
+      state.stamina = Math.max(0, state.stamina - drain*dt);
+    }
+  } else if (keys['ArrowLeft']) {
+    state.vx -= BRAKE*dt;
+    if (state.onGround){
+      state.stamina = Math.min(100, state.stamina + STAMINA_REGEN_BASE*0.4*dt);
+    }
+  } else {
+    state.vx *= (state.onGround ? 0.985 : 0.999);
+    if (state.onGround){
+      const downhillBonus = Math.max(0, currentSlope) * STAMINA_REGEN_DOWNHILL;
+      state.stamina = Math.min(100, state.stamina + (STAMINA_REGEN_BASE + downhillBonus)*dt);
+    }
+  }
+  state.vx = Math.max(-MAX_SPEED*0.5, Math.min(MAX_SPEED, state.vx));
+
+  state.vy += GRAVITY*dt;
+
+  if (!state.onGround){
+    if (keys['ArrowUp']) state.angVel -= AIR_ROTATE_SPEED*dt*10;
+    if (keys['ArrowDown']) state.angVel += AIR_ROTATE_SPEED*dt*10;
+    state.angVel *= 0.99;
+  }
+
+  state.x += state.vx*dt;
+  state.y += state.vy*dt;
+  state.angle += state.angVel*dt;
+
+  state.x = Math.max(60, Math.min(TRACK_LENGTH-60, state.x));
+
+  const fx = state.x + Math.cos(state.angle)*WHEEL_BASE;
+  const fy_ = state.y + Math.sin(state.angle)*WHEEL_BASE;
+  const rx = state.x - Math.cos(state.angle)*WHEEL_BASE;
+  const ry_ = state.y - Math.sin(state.angle)*WHEEL_BASE;
+
+  const groundF = groundY(fx) - 18;
+  const groundR = groundY(rx) - 18;
+
+  const frontBelow = fy_ >= groundF;
+  const rearBelow = ry_ >= groundR;
+
+  if (frontBelow || rearBelow){
+    state.onGround = true;
+
+    const targetAngle = Math.atan(groundSlope(state.x));
+    const groundC = groundY(state.x) - 20;
+
+    const penetration = state.y - groundC;
+    if (penetration > 0){
+      state.vy -= penetration * 40;
+      state.vy *= 0.5;
+      state.y = groundC;
+    }
+
+    const angDiff = targetAngle - state.angle;
+    state.angVel += angDiff * 18 * dt * 60 * dt;
+    state.angle += angDiff * Math.min(1, 12*dt);
+    state.angVel *= 0.7;
+
+    if (Math.abs(angDiff) > 1.1 && state.vx > 150){
+      crash();
+    }
+  } else {
+    state.onGround = false;
+  }
+
+  const normAngle = ((state.angle + Math.PI) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI) - Math.PI;
+  if (Math.abs(normAngle) > 2.2){
+    crash();
+  }
+
+  if (state.y > 1200){
+    crash();
+  }
+
+  camX = state.x - innerWidth*0.35;
+}
+
+function crash(){
+  if (state.crashed) return;
+  state.crashed = true;
+  const msg = document.getElementById('msg');
+  msg.textContent = 'Krasch! Tryck R för att starta om';
+  msg.style.display = 'block';
+}
+
+// ---------- Rendering ----------
+function render(){
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const skyGrad = ctx.createLinearGradient(0,0,0,h);
+  skyGrad.addColorStop(0, '#7ec8e3');
+  skyGrad.addColorStop(1, '#cfe9d8');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0,0,w,h);
+
+  if (bgImg.complete && bgImg.naturalWidth){
+    const bw = 700, bh = bw * (bgImg.naturalHeight/bgImg.naturalWidth);
+    const parX = -(camX*0.25) % bw;
+    for (let i=-1; i<Math.ceil(w/bw)+1; i++){
+      ctx.drawImage(bgImg, parX + i*bw, h*0.25, bw, bh);
+    }
+  }
+
+  ctx.save();
+  ctx.translate(-camX, 0);
+
+  const startX = Math.max(0, camX-100);
+  const endX = camX + w + 100;
+  ctx.beginPath();
+  ctx.moveTo(startX, h+400);
+  for (let x=startX; x<=endX; x+=12){
+    ctx.lineTo(x, groundY(x));
+  }
+  ctx.lineTo(endX, h+400);
+  ctx.closePath();
+  ctx.fillStyle = tilePattern || '#6b4a2f';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(startX, groundY(startX));
+  for (let x=startX; x<=endX; x+=12) ctx.lineTo(x, groundY(x));
+  ctx.strokeStyle = '#2e5c1f';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  ctx.save();
+  ctx.translate(state.x, state.y);
+  if (!state.crashed){
+    ctx.rotate(state.angle);
+    if (bikeImg.complete) ctx.drawImage(bikeImg, -bikeImg.width/2, -bikeImg.height/2 + 10);
+  } else {
+    if (crashImg.complete) ctx.drawImage(crashImg, -crashImg.width/2, -crashImg.height/2 + 20);
+  }
+  ctx.restore();
+
+  ctx.restore();
+
+  document.getElementById('time').textContent = state.time.toFixed(1);
+
+  const pct = Math.round(state.stamina);
+  const bar = document.getElementById('staminaBar');
+  bar.style.width = pct + '%';
+  bar.style.backgroundColor = pct > 55 ? '#4caf50' : (pct > 25 ? '#e0a800' : '#c62828');
+  document.getElementById('staminaPct').textContent = pct;
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
