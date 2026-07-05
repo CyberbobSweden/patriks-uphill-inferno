@@ -6,6 +6,22 @@ Versionsnumret syns i spelet (uppe till höger, och på startskärmen) samt i
 webbläsarens konsol (F12) vid start. Höj `VERSION` i `index.html` varje gång
 ni ändrar något så syns det att en ny build är uppladdad.
 
+## v1.4.0
+- **Installera som app** (PWA): manifest.json + service worker, går att
+  installera på mobil/dator för helskärms-upplevelse. Knapp på startskärmen
+  dyker upp där webbläsaren stödjer det (Chrome/Edge/Android). På iPhone/iPad
+  (Safari) finns ingen sådan knapp i webbläsare — där gör man det manuellt via
+  Dela-ikonen → "Lägg till på hemskärmen".
+- Helskärm aktiveras automatiskt när man trycker STARTA
+- **Bugfix:** terräng-grafiken använde av misstag en cykel-sprite som tile
+  (syntes som upprepade cyklister över hela banan/bakgrunden) — bytt till en
+  riktig gräs/jord-tile
+- **Bugfix:** fysiken kraschade orättvist snabbt vid kullar/hopp. Vinkeln
+  räknas nu utifrån de faktiska hjulkontakterna (stabilare än tidigare
+  momentana derivata), hopp-ramperna är rundade istället för spetsiga, och en
+  krasch kräver att felvinkeln håller i sig en liten stund (inte bara en
+  enstaka bildruta)
+
 ## v1.3.0
 - Ljudeffekter, syntade direkt i webbläsaren (Web Audio API) i 8-bit-stil —
   ingen extra ljudfil behövs:

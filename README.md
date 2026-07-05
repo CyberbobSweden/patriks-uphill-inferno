@@ -1,6 +1,6 @@
 # 🔥 Patriks Uphill Inferno
 
-**v1.3.0** · Gjort av **Cyberbob & Risingbob** · se [CHANGELOG.md](CHANGELOG.md)
+**v1.4.0** · Gjort av **Cyberbob & Risingbob** · se [CHANGELOG.md](CHANGELOG.md)
 för versionshistorik.
 
 Fysikbaserat 2D mountainbike-spel i Kick Start/Trials-stil. Ingen pedal-animation
@@ -12,6 +12,8 @@ partierna innan du bonkar.
 ```
 Patriks Uphill Inferno/
 ├── index.html
+├── manifest.json
+├── service-worker.js
 ├── README.md
 ├── CHANGELOG.md
 ├── .github/
@@ -22,12 +24,16 @@ Patriks Uphill Inferno/
     ├── bg_day.png
     ├── terrain_tile.png
     ├── crash1.png
+    ├── icon-192.png
+    ├── icon-512.png
     └── audio/
         └── bgmusic.mp3
 ```
 `index.html` letar efter bilder i `assets/` och musik i `assets/audio/` — om
 den här strukturen inte stämmer exakt blir det tomma rutor/ingen musik även
-om sidan i övrigt fungerar.
+om sidan i övrigt fungerar. `manifest.json` och `service-worker.js` måste
+ligga i **rotmappen** (samma nivå som `index.html`), annars fungerar inte
+"installera som app".
 
 ## Kör lokalt
 Öppna `index.html` i webbläsaren, eller kör `python3 -m http.server` i mappen
@@ -52,6 +58,21 @@ och gå till `localhost:8000`.
   minst 12% ork kvar för att aktiveras.
 
 Alla värden ligger som konstanter längst upp i `update()` i `index.html`.
+
+## Installera som app 📲
+Spelet är en PWA (Progressive Web App) — går att installera för en
+helskärms-upplevelse utan webbläsarens adressfält/knappar.
+
+- **Android / Chrome / Edge (dator eller mobil):** en knapp — "📲 Installera
+  som app" — dyker upp på startskärmen automatiskt när webbläsaren tillåter
+  det. Klicka och bekräfta.
+- **iPhone/iPad (Safari):** Safari stödjer inte den automatiska knappen. Gå
+  istället till Dela-ikonen (☐↑) → **"Lägg till på hemskärmen"**.
+- När den är installerad öppnas spelet i eget fönster utan webbläsar-UI, och
+  fungerar även offline efter första besöket (tack vare service worker som
+  cachar filerna).
+- Helskärm aktiveras även automatiskt bara genom att trycka **STARTA**, även
+  utan att installera appen.
 
 ## Ljud
 - Startskärmen låter dig slå av/på musik **och ljudeffekter** var för sig, samt

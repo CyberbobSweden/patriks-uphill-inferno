@@ -2,8 +2,15 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Patriks Uphill Inferno</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c1121f">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Uphill Inferno">
 <style>
   html, body {
     margin: 0; padding: 0; overflow: hidden; background: #1a2a1a;
@@ -78,6 +85,12 @@
   }
   #startBtn:hover { filter: brightness(1.1); }
   #startCredits { margin-top: 20px; font-size: 12px; color: #888; }
+  #installBtn {
+    margin-top: 14px; background: rgba(255,255,255,0.08); color: #ffb703;
+    border: 1px solid rgba(255,183,3,0.5); font-size: 13px; padding: 8px 18px;
+    border-radius: 6px; cursor: pointer; display: none;
+  }
+  #installBtn:hover { background: rgba(255,183,3,0.15); }
 </style>
 </head>
 <body>
@@ -104,6 +117,7 @@
   </div>
 
   <button id="startBtn">STARTA</button>
+  <button id="installBtn">📲 Installera som app</button>
   <div id="startCredits">v<span id="versionStart"></span> · av Cyberbob &amp; Risingbob</div>
 </div>
 
@@ -129,9 +143,13 @@ window.addEventListener('resize', resize); resize();
 // ---------- Version / Credits ----------
 // Höj VERSION varje gång ni gör en ändring så syns det i spelet att det är
 // en ny build. Lägg en rad i CHANGELOG.md också (senaste först).
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const CREDITS = 'Cyberbob & Risingbob';
 const CHANGELOG = [
+  '1.4.0 – PWA: går att installera som app (mobil/dator), helskärm vid start. ' +
+    'Fix: fel sprite användes som terräng-tile (syntes som upprepade cyklister). ' +
+    'Fix: fysik/krasch-känslighet vid höjdskillnader/hopp (mjukare ramper, vinkel ' +
+    'beräknas från faktiska hjulkontakter, krasch kräver att felet håller i sig)',
   '1.3.0 – Ljudeffekter (syntade, 8-bit-stil): hopp, landning, krasch, låg ork-varning + SFX-knapp/inställning',
   '1.2.0 – Startskärm med ljudinställningar, bakgrundsmusik (loop), musik-knapp i spelet',
   '1.1.0 – Ork-system: dränering i uppförsbacke, SHIFT-boost, bonk-effekt',
@@ -140,6 +158,31 @@ const CHANGELOG = [
 document.getElementById('versionInfo').innerHTML = `v${VERSION} &middot; by ${CREDITS}`;
 document.getElementById('versionStart').textContent = VERSION;
 console.log(`Patriks Uphill Inferno v${VERSION}\n` + CHANGELOG.join('\n'));
+
+// ---------- PWA: service worker + installera-som-app ----------
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  });
+}
+
+let deferredInstallPrompt = null;
+const installBtn = document.getElementById('installBtn');
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  installBtn.style.display = 'inline-block';
+});
+installBtn.addEventListener('click', async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  installBtn.style.display = 'none';
+});
+window.addEventListener('appinstalled', () => {
+  installBtn.style.display = 'none';
+});
 
 // ---------- SFX engine (Web Audio API, syntetiska 8-bit-ljud, inga extra filer) ----------
 let audioCtx = null;
@@ -246,6 +289,11 @@ document.getElementById('startBtn').addEventListener('click', () => {
   ensureAudioCtx();
   applyMusicSettings();
   applySfxSettings();
+  // Försök gå helskärm för en bättre app-känsla (misslyckas tyst om
+  // webbläsaren blockerar det, t.ex. redan installerad som PWA)
+  const el = document.documentElement;
+  const reqFS = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (reqFS) { try { reqFS.call(el); } catch(e) {} }
   document.getElementById('startScreen').style.display = 'none';
   lastT = performance.now();
 });
@@ -270,8 +318,11 @@ function groundY(x){
   const rampCenters = [1800, 3600, 5400, 7000];
   for (const c of rampCenters){
     const d = x - c;
-    if (d > -120 && d < 120){
-      y -= Math.max(0, 140 - Math.abs(d)*1.1);
+    const halfWidth = 160;
+    if (d > -halfWidth && d < halfWidth){
+      // Mjuk rundad kulle (cosinus) istället för spetsig triangel -
+      // spetsiga toppar gav omöjliga vinkeländringar och krascher
+      y -= (Math.cos((d/halfWidth) * Math.PI) + 1) * 0.5 * 130;
     }
   }
   return y;
@@ -296,7 +347,8 @@ function resetState(){
     stamina: 100,
     standing: false,
     lowStaminaWarned: false,
-    bonkedOut: false
+    bonkedOut: false,
+    crashTimer: 0
   };
   document.getElementById('msg').style.display = 'none';
 }
@@ -412,8 +464,13 @@ function update(dt){
   if (frontBelow || rearBelow){
     state.onGround = true;
 
-    const targetAngle = Math.atan(groundSlope(state.x));
-    const groundC = groundY(state.x) - 20;
+    // Vinkel baserad på faktiska hjulkontakter (mjukare & stabilare än en
+    // momentan derivata mitt under cykeln, som kunde ge orimliga hopp i
+    // brant/kuperad terräng)
+    const groundFront = groundY(fx);
+    const groundRear = groundY(rx);
+    const targetAngle = Math.atan2(groundFront - groundRear, fx - rx);
+    const groundC = (groundFront + groundRear) / 2 - 20;
 
     const penetration = state.y - groundC;
     if (penetration > 0){
@@ -427,11 +484,18 @@ function update(dt){
     state.angle += angDiff * Math.min(1, 12*dt);
     state.angVel *= 0.7;
 
-    if (Math.abs(angDiff) > 1.1 && state.vx > 150){
-      crash();
+    // Krascha bara om felvinkeln är stor OCH håller i sig en liten stund -
+    // en enstaka frame med stort fel (t.ex. vid en kulltopp) ska inte
+    // räcka, det ska kännas orättvist snabbt annars
+    if (Math.abs(angDiff) > 1.4 && state.vx > 150){
+      state.crashTimer += dt;
+      if (state.crashTimer > 0.12) crash();
+    } else {
+      state.crashTimer = Math.max(0, state.crashTimer - dt*2);
     }
   } else {
     state.onGround = false;
+    state.crashTimer = Math.max(0, state.crashTimer - dt*2);
   }
 
   if (!wasOnGround && state.onGround && !state.crashed){
