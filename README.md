@@ -1,6 +1,6 @@
 # 🔥 Patriks Uphill Inferno
 
-**v1.2.0** · Gjort av **Cyberbob & Risingbob** · se [CHANGELOG.md](CHANGELOG.md)
+**v1.3.0** · Gjort av **Cyberbob & Risingbob** · se [CHANGELOG.md](CHANGELOG.md)
 för versionshistorik.
 
 Fysikbaserat 2D mountainbike-spel i Kick Start/Trials-stil. Ingen pedal-animation
@@ -54,12 +54,19 @@ och gå till `localhost:8000`.
 Alla värden ligger som konstanter längst upp i `update()` i `index.html`.
 
 ## Ljud
-- Startskärmen låter dig slå av/på musik och ställa volym **innan** spelet
-  börjar (webbläsare kräver ett klick innan ljud får spela — därför finns
-  "STARTA"-knappen).
-- Under spelets gång kan du toggla musiken med knappen nere till höger.
-- Valet (på/av + volym) sparas i webbläsaren till nästa gång.
-- Vill du byta låt: lägg en ny mp3 i `assets/audio/`, döp den till
+- Startskärmen låter dig slå av/på musik **och ljudeffekter** var för sig, samt
+  ställa volym — **innan** spelet börjar (webbläsare kräver ett klick innan
+  ljud får spela, därför finns "STARTA"-knappen).
+- Under spelets gång kan du toggla musik (🔊) och ljudeffekter (💥) separat
+  med knapparna nere till höger.
+- Ljudeffekterna är **syntade direkt i webbläsaren** (Web Audio API, inga
+  extra mp3-filer) i 8-bit/chiptune-stil: hopp, landning, krasch, samt en
+  varningssignal när orken börjar ta slut. Vill du ändra hur de låter, kika på
+  funktionerna `sfxJump`, `sfxLand`, `sfxCrash`, `sfxLowStamina`, `sfxBonkOut`
+  i `index.html` — frekvens/längd/typ (`square`, `triangle`, `sawtooth`) styr
+  klangen.
+- Valen (musik på/av, SFX på/av, volym) sparas i webbläsaren till nästa gång.
+- Vill du byta bakgrundsmusik: lägg en ny mp3 i `assets/audio/`, döp den till
   `bgmusic.mp3` (eller ändra `src`-attributet på `<audio id="bgMusic">`
   i `index.html`).
 

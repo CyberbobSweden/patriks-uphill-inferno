@@ -94,6 +94,10 @@
       <input type="checkbox" id="musicToggleStart" checked>
     </div>
     <div class="settingRow">
+      <label for="sfxToggleStart">Ljudeffekter</label>
+      <input type="checkbox" id="sfxToggleStart" checked>
+    </div>
+    <div class="settingRow">
       <label for="musicVolume">Volym</label>
       <input type="range" id="musicVolume" min="0" max="100" value="50">
     </div>
@@ -112,6 +116,7 @@
 <div id="msg"></div>
 <div id="controls">← Broms / Baklänges &nbsp;|&nbsp; → Gasa &nbsp;|&nbsp; ↑ Luta bakåt (wheelie) &nbsp;|&nbsp; ↓ Luta framåt &nbsp;|&nbsp; SHIFT Stå upp (mer kraft, mer ork) &nbsp;|&nbsp; R Starta om</div>
 <button id="musicToggle">🔊 Musik</button>
+<button id="sfxToggle" style="position:fixed;bottom:10px;right:100px;z-index:6;background:rgba(0,0,0,0.5);color:#fff;border:1px solid #666;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;">💥 SFX</button>
 
 <audio id="bgMusic" src="assets/audio/bgmusic.mp3" loop preload="auto"></audio>
 
@@ -124,9 +129,10 @@ window.addEventListener('resize', resize); resize();
 // ---------- Version / Credits ----------
 // Höj VERSION varje gång ni gör en ändring så syns det i spelet att det är
 // en ny build. Lägg en rad i CHANGELOG.md också (senaste först).
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const CREDITS = 'Cyberbob & Risingbob';
 const CHANGELOG = [
+  '1.3.0 – Ljudeffekter (syntade, 8-bit-stil): hopp, landning, krasch, låg ork-varning + SFX-knapp/inställning',
   '1.2.0 – Startskärm med ljudinställningar, bakgrundsmusik (loop), musik-knapp i spelet',
   '1.1.0 – Ork-system: dränering i uppförsbacke, SHIFT-boost, bonk-effekt',
   '1.0.0 – Första spelbara versionen: fysik, terräng, krasch'
@@ -134,6 +140,73 @@ const CHANGELOG = [
 document.getElementById('versionInfo').innerHTML = `v${VERSION} &middot; by ${CREDITS}`;
 document.getElementById('versionStart').textContent = VERSION;
 console.log(`Patriks Uphill Inferno v${VERSION}\n` + CHANGELOG.join('\n'));
+
+// ---------- SFX engine (Web Audio API, syntetiska 8-bit-ljud, inga extra filer) ----------
+let audioCtx = null;
+let sfxOn = true;
+const sfxToggleStart = document.getElementById('sfxToggleStart');
+const sfxToggleBtn = document.getElementById('sfxToggle');
+
+function ensureAudioCtx(){
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function sfxVol(){ return (musicVolume.value / 100); }
+
+function playTone(freq, duration, type, vol, glideTo){
+  if (!sfxOn || !audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  if (glideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(20,glideTo), t0+duration);
+  gain.gain.setValueAtTime(vol*sfxVol(), t0);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0+duration);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0+duration);
+}
+
+function playNoiseBurst(duration, vol){
+  if (!sfxOn || !audioCtx) return;
+  const bufferSize = Math.floor(audioCtx.sampleRate * duration);
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i=0; i<bufferSize; i++){
+    data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
+  }
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(vol*sfxVol(), audioCtx.currentTime);
+  noise.connect(gain).connect(audioCtx.destination);
+  noise.start();
+}
+
+function sfxJump(){ playTone(300, 0.16, 'square', 0.28, 760); }
+function sfxLand(){ playTone(160, 0.12, 'triangle', 0.3, 55); }
+function sfxCrash(){
+  playNoiseBurst(0.4, 0.5);
+  playTone(180, 0.4, 'sawtooth', 0.32, 40);
+}
+function sfxLowStamina(){
+  playTone(880, 0.09, 'square', 0.18, null);
+  setTimeout(() => playTone(880, 0.09, 'square', 0.18, null), 130);
+}
+function sfxBonkOut(){ playTone(220, 0.3, 'square', 0.25, 90); }
+
+function applySfxSettings(){
+  sfxOn = sfxToggleStart.checked;
+  localStorage.setItem('pui_sfxOn', sfxOn);
+  sfxToggleBtn.textContent = sfxOn ? '💥 SFX' : '🔇 SFX';
+}
+sfxToggleStart.addEventListener('change', applySfxSettings);
+sfxToggleBtn.addEventListener('click', () => {
+  sfxToggleStart.checked = !sfxToggleStart.checked;
+  applySfxSettings();
+});
 
 // ---------- Audio ----------
 const bgMusic = document.getElementById('bgMusic');
@@ -144,8 +217,10 @@ const musicToggle = document.getElementById('musicToggle');
 // Läs sparade inställningar (om spelaren varit här förut)
 const savedVol = localStorage.getItem('pui_volume');
 const savedMusicOn = localStorage.getItem('pui_musicOn');
+const savedSfxOn = localStorage.getItem('pui_sfxOn');
 if (savedVol !== null) musicVolume.value = savedVol;
 if (savedMusicOn !== null) musicToggleStart.checked = savedMusicOn === 'true';
+if (savedSfxOn !== null) sfxToggleStart.checked = savedSfxOn === 'true';
 bgMusic.volume = musicVolume.value / 100;
 
 function applyMusicSettings(){
@@ -168,7 +243,9 @@ musicToggle.addEventListener('click', () => {
 
 // ---------- Start screen -> game ----------
 document.getElementById('startBtn').addEventListener('click', () => {
-  applyMusicSettings(); // starta/pausa musik enligt val, och lås upp audio-autoplay
+  ensureAudioCtx();
+  applyMusicSettings();
+  applySfxSettings();
   document.getElementById('startScreen').style.display = 'none';
   lastT = performance.now();
 });
@@ -217,7 +294,9 @@ function resetState(){
     time: 0,
     running: true,
     stamina: 100,
-    standing: false
+    standing: false,
+    lowStaminaWarned: false,
+    bonkedOut: false
   };
   document.getElementById('msg').style.display = 'none';
 }
@@ -328,6 +407,8 @@ function update(dt){
   const frontBelow = fy_ >= groundF;
   const rearBelow = ry_ >= groundR;
 
+  const wasOnGround = state.onGround;
+
   if (frontBelow || rearBelow){
     state.onGround = true;
 
@@ -353,6 +434,27 @@ function update(dt){
     state.onGround = false;
   }
 
+  if (!wasOnGround && state.onGround && !state.crashed){
+    sfxLand();
+  } else if (wasOnGround && !state.onGround && state.vy < -140){
+    sfxJump();
+  }
+
+  // Ork-varning: pip en gång när den sjunker under 20%, återställ över 30%
+  if (state.stamina < 20 && !state.lowStaminaWarned){
+    sfxLowStamina();
+    state.lowStaminaWarned = true;
+  } else if (state.stamina > 30){
+    state.lowStaminaWarned = false;
+  }
+
+  if (state.stamina <= 0 && !state.bonkedOut){
+    sfxBonkOut();
+    state.bonkedOut = true;
+  } else if (state.stamina > 15){
+    state.bonkedOut = false;
+  }
+
   const normAngle = ((state.angle + Math.PI) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI) - Math.PI;
   if (Math.abs(normAngle) > 2.2){
     crash();
@@ -368,6 +470,7 @@ function update(dt){
 function crash(){
   if (state.crashed) return;
   state.crashed = true;
+  sfxCrash();
   const msg = document.getElementById('msg');
   msg.textContent = 'Krasch! Tryck R för att starta om';
   msg.style.display = 'block';

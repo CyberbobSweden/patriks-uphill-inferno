@@ -6,6 +6,17 @@ Versionsnumret syns i spelet (uppe till höger, och på startskärmen) samt i
 webbläsarens konsol (F12) vid start. Höj `VERSION` i `index.html` varje gång
 ni ändrar något så syns det att en ny build är uppladdad.
 
+## v1.3.0
+- Ljudeffekter, syntade direkt i webbläsaren (Web Audio API) i 8-bit-stil —
+  ingen extra ljudfil behövs:
+  - Hopp (stigande blip) när cykeln lämnar marken med fart
+  - Landning (dov thud) när hjulen tar mark igen
+  - Krasch (brus + fallande ton)
+  - Varningspip när orken sjunker under 20%
+  - Distinkt "bonk"-ljud när orken tar helt slut
+- Ny SFX-knapp (💥) nere till höger, oberoende av musik-knappen
+- Ljudeffekter av/på-val på startskärmen, sparas i webbläsaren
+
 ## v1.2.0
 - Startskärm innan spelet kör igång, med:
   - På/av för bakgrundsmusik
