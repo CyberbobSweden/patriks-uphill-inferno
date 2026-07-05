@@ -143,9 +143,15 @@ window.addEventListener('resize', resize); resize();
 // ---------- Version / Credits ----------
 // Höj VERSION varje gång ni gör en ändring så syns det i spelet att det är
 // en ny build. Lägg en rad i CHANGELOG.md också (senaste först).
-const VERSION = '1.4.0';
+const VERSION = '1.4.1';
 const CREDITS = 'Cyberbob & Risingbob';
 const CHANGELOG = [
+  '1.4.1 – Visuell uppfräschning: bakgrunden var suddig (uppskalad lågupplöst ' +
+    'bild) och visade tydliga skarvar var 700:e pixel — nu uppskalad/skärpt ' +
+    'offline + spegelvänd varannan gång så skarvarna inte syns lika lätt. ' +
+    'Marken visade tidigare ett uppenbart upprepat rutmönster — ersatt med ' +
+    'en gradient-fylld jordyta + grästextur-kant + glest utspridda, ' +
+    'oregelbundet placerade detaljer istället för ett tydligt rutnät',
   '1.4.0 – PWA: går att installera som app (mobil/dator), helskärm vid start. ' +
     'Fix: fel sprite användes som terräng-tile (syntes som upprepade cyklister). ' +
     'Fix: fysik/krasch-känslighet vid höjdskillnader/hopp (mjukare ramper, vinkel ' +
@@ -303,9 +309,6 @@ const bikeImg = new Image(); bikeImg.src = 'assets/bike_idle.png';
 const crashImg = new Image(); crashImg.src = 'assets/crash1.png';
 const bgImg = new Image(); bgImg.src = 'assets/bg_day.png';
 const tileImg = new Image(); tileImg.src = 'assets/terrain_tile.png';
-
-let tilePattern = null;
-tileImg.onload = () => { tilePattern = ctx.createPattern(tileImg, 'repeat'); };
 
 // ---------- Terrain ----------
 const TRACK_LENGTH = 8000;
@@ -552,16 +555,30 @@ function render(){
   ctx.fillRect(0,0,w,h);
 
   if (bgImg.complete && bgImg.naturalWidth){
-    const bw = 700, bh = bw * (bgImg.naturalHeight/bgImg.naturalWidth);
-    const parX = -(camX*0.25) % bw;
-    for (let i=-1; i<Math.ceil(w/bw)+1; i++){
-      ctx.drawImage(bgImg, parX + i*bw, h*0.25, bw, bh);
+    const bw = 900, bh = bw * (bgImg.naturalHeight/bgImg.naturalWidth);
+    const parX = -(camX*0.25);
+    const startI = Math.floor((-parX - w) / bw) - 1;
+    const endI = Math.ceil((-parX + w*2) / bw) + 1;
+    for (let i=startI; i<=endI; i++){
+      const xPos = parX + i*bw;
+      // Varannan kopia spegelvänd (ping-pong) - döljer den annars tydliga
+      // skarven av att samma bild upprepas identiskt om och om igen
+      if (i % 2 === 0){
+        ctx.drawImage(bgImg, xPos, h*0.22, bw, bh);
+      } else {
+        ctx.save();
+        ctx.translate(xPos + bw, h*0.22);
+        ctx.scale(-1, 1);
+        ctx.drawImage(bgImg, 0, 0, bw, bh);
+        ctx.restore();
+      }
     }
   }
 
   ctx.save();
   ctx.translate(-camX, 0);
 
+  // Marken: gradient-fyllning istället för ett uppenbart upprepat rutmönster
   const startX = Math.max(0, camX-100);
   const endX = camX + w + 100;
   ctx.beginPath();
@@ -571,15 +588,49 @@ function render(){
   }
   ctx.lineTo(endX, h+400);
   ctx.closePath();
-  ctx.fillStyle = tilePattern || '#6b4a2f';
+  const dirtGrad = ctx.createLinearGradient(0, groundY(startX)-10, 0, h+400);
+  dirtGrad.addColorStop(0, '#8a5a34');
+  dirtGrad.addColorStop(0.15, '#6b4a2f');
+  dirtGrad.addColorStop(1, '#3d2a1c');
+  ctx.fillStyle = dirtGrad;
   ctx.fill();
 
+  // Grästäckt kant längs ytan - tjockare grön linje med lite ojämnhet
   ctx.beginPath();
   ctx.moveTo(startX, groundY(startX));
-  for (let x=startX; x<=endX; x+=12) ctx.lineTo(x, groundY(x));
-  ctx.strokeStyle = '#2e5c1f';
-  ctx.lineWidth = 4;
+  for (let x=startX; x<=endX; x+=8){
+    ctx.lineTo(x, groundY(x) - 2 + Math.sin(x*0.35)*1.2);
+  }
+  ctx.strokeStyle = '#3f7a2e';
+  ctx.lineWidth = 9;
+  ctx.lineCap = 'round';
   ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(startX, groundY(startX));
+  for (let x=startX; x<=endX; x+=8) ctx.lineTo(x, groundY(x));
+  ctx.strokeStyle = '#2e5c1f';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Glesa dekorativa detaljer (samma tile, men oregelbundet utspridda och
+  // varierade i skala/rotation så det inte ser ut som ett rutnät)
+  if (tileImg.complete && tileImg.naturalWidth){
+    const spacing = 260;
+    const firstIdx = Math.floor(startX / spacing);
+    const lastIdx = Math.ceil(endX / spacing);
+    for (let i=firstIdx; i<=lastIdx; i++){
+      const seed = i * 12.9898;
+      const rnd = (Math.sin(seed) * 43758.5453) % 1;
+      const rnd2 = (Math.sin(seed*1.7+3.1) * 12543.31) % 1;
+      const jitter = (Math.abs(rnd) - 0.5) * spacing * 0.7;
+      const tx = i*spacing + spacing/2 + jitter;
+      const scale = 0.5 + Math.abs(rnd2) * 0.4;
+      const tw = tileImg.naturalWidth * scale;
+      const th = tileImg.naturalHeight * scale;
+      const ty = groundY(tx) - th*0.35;
+      ctx.drawImage(tileImg, tx - tw/2, ty, tw, th);
+    }
+  }
 
   ctx.save();
   ctx.translate(state.x, state.y);

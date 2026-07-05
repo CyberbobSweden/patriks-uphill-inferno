@@ -6,6 +6,16 @@ Versionsnumret syns i spelet (uppe till höger, och på startskärmen) samt i
 webbläsarens konsol (F12) vid start. Höj `VERSION` i `index.html` varje gång
 ni ändrar något så syns det att en ny build är uppladdad.
 
+## v1.4.1
+- **Bakgrunden** var suddig eftersom en lågupplöst bild (200×132) sträcktes
+  upp mycket större vid rendering. Nu förbehandlad offline (uppskalad +
+  skärpt) och renderas med **spegelvänd varannan kopia** ("ping-pong") så
+  de tidigare tydliga skarvarna mellan upprepningarna syns mycket mindre.
+- **Marken** visade tidigare ett uppenbart, tätt upprepat rutmönster (samma
+  liten tile om och om igen). Ersatt med en gradient-fylld jordyta + en
+  grästexturerad överkant, plus glest utspridda dekorationer i oregelbunden
+  skala/position istället för ett synligt rutnät.
+
 ## v1.4.0
 - **Installera som app** (PWA): manifest.json + service worker, går att
   installera på mobil/dator för helskärms-upplevelse. Knapp på startskärmen
