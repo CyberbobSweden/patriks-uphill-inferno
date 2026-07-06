@@ -6,6 +6,33 @@ Versionsnumret syns i spelet (uppe till höger, och på startskärmen) samt i
 webbläsarens konsol (F12) vid start. Höj `VERSION` i `index.html` varje gång
 ni ändrar något så syns det att en ny build är uppladdad.
 
+## v1.5.0
+- **Touch-kontroller för mobil**, byggda efter samma mönster som Hill Climb
+  Racing och liknande fysikbaserade mobilspel använder (efter research på hur
+  välfungerande spel löser det):
+  - Stora, halvtransparenta tap-zoner längs botten: vänster = broms/baklänges,
+    höger = gasa (hela sidan, inte små ikoner — färre "fat finger"-missar)
+  - Mindre knappar i mitten: ↑/↓ (luta i luften), STÅ UPP, starta om
+  - Stödjer flera fingrar samtidigt (t.ex. hålla gas + luta i luften på en gång)
+  - Visas bara på touch-enheter, syns inte på dator
+  - Visuell feedback (ljusare bakgrund) när en zon trycks ned
+- Musik/SFX-knapparna flyttade från botten till toppen (hörnet) så de inte
+  krockar med de nya touch-zonerna
+
+## v1.4.2
+- **Rotorsaken** till bakgrunds-skarven hittad: bilden hade en tunn kvarlämnad
+  svart kant från originalarkets rutnät-linjer, som blev en tjock synlig
+  stapel varje gång bilden upprepades. Beskuren om utan kanten + bildens
+  vänster/högerkant tonas nu ut till transparent, så en skarv aldrig kan synas
+  oavsett skärmstorlek/zoom.
+- Jord-dekorationerna som "flöt" löst ovanpå marken (synligt i skärmdumpen)
+  är ersatta med enkla, direkt ritade gräs-tuvor som smälter in i konturen
+  istället för fristående sprite-rutor.
+- **Mobil:** knappar och kontroll-text överlappade varandra på smala skärmar.
+  Lagt till responsiv CSS (mindre text/knappar under 700px bredd, kontroll-
+  texten döljs helt under 420px men visas istället på startskärmen så
+  informationen inte försvinner).
+
 ## v1.4.1
 - **Bakgrunden** var suddig eftersom en lågupplöst bild (200×132) sträcktes
   upp mycket större vid rendering. Nu förbehandlad offline (uppskalad +

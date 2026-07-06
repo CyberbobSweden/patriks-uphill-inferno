@@ -1,6 +1,6 @@
 # 🔥 Patriks Uphill Inferno
 
-**v1.4.1** · Gjort av **Cyberbob & Risingbob** · se [CHANGELOG.md](CHANGELOG.md)
+**v1.5.0** · Gjort av **Cyberbob & Risingbob** · se [CHANGELOG.md](CHANGELOG.md)
 för versionshistorik.
 
 Fysikbaserat 2D mountainbike-spel i Kick Start/Trials-stil. Ingen pedal-animation
@@ -46,6 +46,10 @@ och gå till `localhost:8000`.
 - **↓** Luta framåt – funkar i luften
 - **SHIFT** (håll + →) Stå upp och trampa – mer kraft, dränerar ork snabbare
 - **R** Starta om
+
+**På mobil/touch:** samma kontroller finns som stora tap-zoner på skärmen
+(vänster/höger halva = broms/gas, mittenknappar = luta/stå upp/starta om).
+Dyker bara upp på touch-enheter, syns inte på dator.
 
 ## Ork-systemet ("stamina")
 - Dräneras bara när du **gasar i uppförsbacke** – ju brantare, desto snabbare.

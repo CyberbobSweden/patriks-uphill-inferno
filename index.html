@@ -53,9 +53,71 @@
     color: #ddd; font-size: 13px; text-shadow: 0 0 4px #000; z-index: 5; text-align:center;
   }
   #musicToggle {
-    position: fixed; bottom: 10px; right: 14px; z-index: 6;
+    position: fixed; top: 64px; right: 14px; z-index: 6;
     background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #666;
     border-radius: 6px; padding: 6px 10px; font-size: 13px; cursor: pointer;
+  }
+  #sfxToggle {
+    position: fixed; top: 102px; right: 14px; z-index: 6;
+    background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #666;
+    border-radius: 6px; padding: 6px 10px; font-size: 13px; cursor: pointer;
+  }
+
+  /* ---------- Mobil/smal skärm: mindre text, undvik överlapp ---------- */
+  @media (max-width: 700px) {
+    #gameTitle { font-size: 14px; top: 8px; right: 8px; }
+    #versionInfo { font-size: 9px; top: 26px; right: 8px; }
+    #hud { font-size: 13px; top: 6px; left: 6px; }
+    #staminaWrap { top: 26px; left: 6px; width: 130px; height: 14px; }
+    #staminaLabel { top: 26px; left: 146px; font-size: 11px; line-height: 14px; }
+    #controls {
+      font-size: 10px; bottom: 46px; left: 6px; right: 6px; transform: none;
+      width: auto; line-height: 1.5;
+    }
+    #musicToggle, #sfxToggle {
+      font-size: 11px; padding: 4px 8px; right: 6px;
+    }
+    #musicToggle { top: 46px; }
+    #sfxToggle { top: 78px; }
+  }
+  @media (max-width: 420px) {
+    #controls { display: none; } /* för trångt - visas bara på startskärmen istället */
+  }
+
+  /* ---------- Touch-kontroller (bara synliga på touch-enheter) ---------- */
+  .touchZone {
+    position: fixed; z-index: 8; -webkit-tap-highlight-color: transparent;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none; touch-action: none;
+    color: rgba(255,255,255,0.55); font-size: 15px; font-weight: bold;
+    text-shadow: 0 0 6px #000;
+    transition: background-color 0.08s linear;
+  }
+  .touchZone.active { background-color: rgba(255,255,255,0.16) !important; }
+
+  #touchBrake {
+    left: 0; bottom: 0; width: 32%; height: 42%;
+    background: rgba(0,0,0,0.14); border-top-right-radius: 24px;
+  }
+  #touchGas {
+    right: 0; bottom: 0; width: 32%; height: 42%;
+    background: rgba(0,0,0,0.14); border-top-left-radius: 24px;
+  }
+  #touchLeanUp, #touchLeanDown {
+    left: 50%; transform: translateX(-50%); width: 74px; height: 58px;
+    background: rgba(0,0,0,0.22); border-radius: 10px; font-size: 22px;
+  }
+  #touchLeanUp { bottom: 128px; }
+  #touchLeanDown { bottom: 58px; }
+  #touchStand {
+    left: 50%; transform: translateX(-95px); bottom: 12px;
+    width: 84px; height: 40px; border-radius: 8px;
+    background: rgba(255,183,3,0.18); color: rgba(255,183,3,0.85); font-size: 12px;
+  }
+  #touchRestart {
+    left: 50%; transform: translateX(11px); bottom: 12px;
+    width: 84px; height: 40px; border-radius: 8px;
+    background: rgba(0,0,0,0.22); font-size: 12px;
   }
 
   /* ---------- Start screen ---------- */
@@ -118,6 +180,10 @@
 
   <button id="startBtn">STARTA</button>
   <button id="installBtn">📲 Installera som app</button>
+  <div style="margin-top:16px;font-size:12px;color:#999;max-width:320px;line-height:1.6;">
+    ← Broms &nbsp;|&nbsp; → Gasa &nbsp;|&nbsp; ↑↓ Luta i luften &nbsp;|&nbsp;
+    SHIFT Stå upp &nbsp;|&nbsp; R Starta om
+  </div>
   <div id="startCredits">v<span id="versionStart"></span> · av Cyberbob &amp; Risingbob</div>
 </div>
 
@@ -130,7 +196,17 @@
 <div id="msg"></div>
 <div id="controls">← Broms / Baklänges &nbsp;|&nbsp; → Gasa &nbsp;|&nbsp; ↑ Luta bakåt (wheelie) &nbsp;|&nbsp; ↓ Luta framåt &nbsp;|&nbsp; SHIFT Stå upp (mer kraft, mer ork) &nbsp;|&nbsp; R Starta om</div>
 <button id="musicToggle">🔊 Musik</button>
-<button id="sfxToggle" style="position:fixed;bottom:10px;right:100px;z-index:6;background:rgba(0,0,0,0.5);color:#fff;border:1px solid #666;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;">💥 SFX</button>
+<button id="sfxToggle">💥 SFX</button>
+
+<!-- ---------- Touch-kontroller (mobil) ---------- -->
+<div id="touchControls" style="display:none;">
+  <div class="touchZone" id="touchBrake">← BROMS</div>
+  <div class="touchZone" id="touchGas">GASA →</div>
+  <div class="touchZone" id="touchLeanUp">↑</div>
+  <div class="touchZone" id="touchLeanDown">↓</div>
+  <div class="touchZone" id="touchStand">STÅ UPP</div>
+  <div class="touchZone" id="touchRestart">↻ OM</div>
+</div>
 
 <audio id="bgMusic" src="assets/audio/bgmusic.mp3" loop preload="auto"></audio>
 
@@ -143,9 +219,21 @@ window.addEventListener('resize', resize); resize();
 // ---------- Version / Credits ----------
 // Höj VERSION varje gång ni gör en ändring så syns det i spelet att det är
 // en ny build. Lägg en rad i CHANGELOG.md också (senaste först).
-const VERSION = '1.4.1';
+const VERSION = '1.5.0';
 const CREDITS = 'Cyberbob & Risingbob';
 const CHANGELOG = [
+  '1.5.0 – Touch-kontroller för mobil: stora tap-zoner för gas/broms (samma ' +
+    'mönster som Hill Climb Racing m.fl. använder), knappar för luta fram/bak ' +
+    'i luften, stå-upp och starta om. Stödjer flera fingrar samtidigt (t.ex. ' +
+    'gas + luta). Musik/SFX-knapparna flyttade upp till hörnet för att inte ' +
+    'krocka med de nya touch-zonerna.',
+  '1.4.2 – Rotorsak till bakgrunds-skarven hittad och fixad: bilden hade en ' +
+    'tunn svart kant kvar från originalarkets rutnät, som blev en tjock svart ' +
+    'stapel när bilden upprepades. Beskuren om + kanterna tonas nu ut till ' +
+    'transparent så skarven aldrig syns. Jord-dekorationerna (som "flöt" löst ' +
+    'ovanpå marken) ersatta med enkla ritade gräs-tuvor som smälter in i ' +
+    'konturen. Mobil-layout: knappar/text överlappade på smala skärmar - fixat ' +
+    'med responsiv CSS, kontroller visas nu även på startskärmen',
   '1.4.1 – Visuell uppfräschning: bakgrunden var suddig (uppskalad lågupplöst ' +
     'bild) och visade tydliga skarvar var 700:e pixel — nu uppskalad/skärpt ' +
     'offline + spegelvänd varannan gång så skarvarna inte syns lika lätt. ' +
@@ -365,6 +453,47 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
+// ---------- Touch-kontroller (mobil) ----------
+// Visas bara på enheter med touch (inte i vägen för musanvändare på dator)
+const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+if (isTouchDevice){
+  document.getElementById('touchControls').style.display = 'block';
+}
+
+function bindTouchZone(id, keyCode, isRestart){
+  const el = document.getElementById(id);
+  // Håller reda på vilka pointer-id:n som just nu trycker denna zon, så att
+  // flera fingrar (t.ex. gas + luta samtidigt) fungerar oberoende av varandra
+  const activePointers = new Set();
+
+  const press = (pointerId) => {
+    activePointers.add(pointerId);
+    keys[keyCode] = true;
+    el.classList.add('active');
+    if (isRestart) resetState();
+  };
+  const release = (pointerId) => {
+    activePointers.delete(pointerId);
+    if (activePointers.size === 0){
+      keys[keyCode] = false;
+      el.classList.remove('active');
+    }
+  };
+
+  el.addEventListener('pointerdown', e => { e.preventDefault(); press(e.pointerId); });
+  el.addEventListener('pointerup', e => { release(e.pointerId); });
+  el.addEventListener('pointercancel', e => { release(e.pointerId); });
+  el.addEventListener('pointerleave', e => { release(e.pointerId); });
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+bindTouchZone('touchGas', 'ArrowRight');
+bindTouchZone('touchBrake', 'ArrowLeft');
+bindTouchZone('touchLeanUp', 'ArrowUp');
+bindTouchZone('touchLeanDown', 'ArrowDown');
+bindTouchZone('touchStand', 'ShiftLeft');
+bindTouchZone('touchRestart', 'KeyR', true);
+
 // ---------- Camera ----------
 let camX = 0;
 
@@ -556,22 +685,14 @@ function render(){
 
   if (bgImg.complete && bgImg.naturalWidth){
     const bw = 900, bh = bw * (bgImg.naturalHeight/bgImg.naturalWidth);
+    // Bilden har nu tonade (transparenta) kanter, så vi kan bara upprepa den
+    // rakt av utan att en skarv syns - liten överlappning extra säkerhet.
+    const spacing = bw * 0.94;
     const parX = -(camX*0.25);
-    const startI = Math.floor((-parX - w) / bw) - 1;
-    const endI = Math.ceil((-parX + w*2) / bw) + 1;
+    const startI = Math.floor((-parX - w) / spacing) - 1;
+    const endI = Math.ceil((-parX + w*2) / spacing) + 1;
     for (let i=startI; i<=endI; i++){
-      const xPos = parX + i*bw;
-      // Varannan kopia spegelvänd (ping-pong) - döljer den annars tydliga
-      // skarven av att samma bild upprepas identiskt om och om igen
-      if (i % 2 === 0){
-        ctx.drawImage(bgImg, xPos, h*0.22, bw, bh);
-      } else {
-        ctx.save();
-        ctx.translate(xPos + bw, h*0.22);
-        ctx.scale(-1, 1);
-        ctx.drawImage(bgImg, 0, 0, bw, bh);
-        ctx.restore();
-      }
+      ctx.drawImage(bgImg, parX + i*spacing, h*0.22, bw, bh);
     }
   }
 
@@ -612,23 +733,27 @@ function render(){
   ctx.lineWidth = 3;
   ctx.stroke();
 
-  // Glesa dekorativa detaljer (samma tile, men oregelbundet utspridda och
-  // varierade i skala/rotation så det inte ser ut som ett rutnät)
-  if (tileImg.complete && tileImg.naturalWidth){
-    const spacing = 260;
-    const firstIdx = Math.floor(startX / spacing);
-    const lastIdx = Math.ceil(endX / spacing);
-    for (let i=firstIdx; i<=lastIdx; i++){
-      const seed = i * 12.9898;
-      const rnd = (Math.sin(seed) * 43758.5453) % 1;
-      const rnd2 = (Math.sin(seed*1.7+3.1) * 12543.31) % 1;
-      const jitter = (Math.abs(rnd) - 0.5) * spacing * 0.7;
-      const tx = i*spacing + spacing/2 + jitter;
-      const scale = 0.5 + Math.abs(rnd2) * 0.4;
-      const tw = tileImg.naturalWidth * scale;
-      const th = tileImg.naturalHeight * scale;
-      const ty = groundY(tx) - th*0.35;
-      ctx.drawImage(tileImg, tx - tw/2, ty, tw, th);
+  // Glesa gräs-tuvor ritade direkt på ytan (inte en sprite) - smälter in
+  // naturligt i konturen istället för att se ut som lösa fläckar
+  const tuftSpacing = 55;
+  const firstT = Math.floor(startX / tuftSpacing);
+  const lastT = Math.ceil(endX / tuftSpacing);
+  ctx.strokeStyle = '#4d8a38';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  for (let i=firstT; i<=lastT; i++){
+    const seed = i * 7.233;
+    const r1 = Math.abs(Math.sin(seed) * 43758.5453) % 1;
+    if (r1 < 0.4) continue; // gles, inte varenda position
+    const r2 = Math.abs(Math.sin(seed*2.1+1.7) * 12543.31) % 1;
+    const tx = i*tuftSpacing + (r1-0.5)*tuftSpacing*0.8;
+    const ty = groundY(tx) - 1;
+    const bladeH = 6 + r2*7;
+    for (let b=-1; b<=1; b++){
+      ctx.beginPath();
+      ctx.moveTo(tx + b*3, ty);
+      ctx.lineTo(tx + b*4.5, ty - bladeH);
+      ctx.stroke();
     }
   }
 
