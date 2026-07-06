@@ -6,6 +6,21 @@ Versionsnumret syns i spelet (uppe till höger, och på startskärmen) samt i
 webbläsarens konsol (F12) vid start. Höj `VERSION` i `index.html` varje gång
 ni ändrar något så syns det att en ny build är uppladdad.
 
+## v1.8.0
+Förenklat kontrollerna efter referensbilder från Mad Skills Motocross:
+
+- **Tog bort den separata wheelie-mekaniken** (eget läge med maxgräns och egen
+  ork-kostnad). Kändes onödigt komplicerat och opålitligt.
+- **Luta fram/bak (↑/↓) fungerar nu hela tiden** - både på marken och i
+  luften, precis som viktförskjutning på en riktig cykel. Lutar du bakåt med
+  tillräcklig fart lyfter framhjulet naturligt genom fysiken (en svagare
+  "självrätande" fjäder mot markytan istället för ett hårt lås), inte via ett
+  separat påslaget specialläge. Mer realistiskt och enklare att förstå.
+- **Touch-knapparna för gas/broms** har nu tydliga röda/gröna ringar (samma
+  visuella språk som i referensen) men är fortfarande stora tap-zoner under
+  ytan för träffsäkerhet - bästa av båda världar.
+- 80-tals retro-känslan i övrigt oförändrad.
+
 ## v1.7.0
 - **Kritisk fix:** kameran följde bara banan i sidled, inte på höjden. Eftersom
   v1.6.0 lade till en riktig uppförsbacke klättrade banan så pass högt att

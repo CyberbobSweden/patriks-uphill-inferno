@@ -95,15 +95,24 @@
     transition: background-color 0.08s linear;
   }
   .touchZone.active { background-color: rgba(255,255,255,0.16) !important; }
+  .touchZone.active .touchRing { background-color: rgba(255,255,255,0.25); }
 
   #touchBrake {
     left: 0; bottom: 0; width: 32%; height: 42%;
     background: rgba(0,0,0,0.14); border-top-right-radius: 24px;
+    flex-direction: column; gap: 6px;
   }
   #touchGas {
     right: 0; bottom: 0; width: 32%; height: 42%;
     background: rgba(0,0,0,0.14); border-top-left-radius: 24px;
+    flex-direction: column; gap: 6px;
   }
+  .touchRing {
+    width: 56px; height: 56px; border-radius: 50%;
+    border: 5px solid; display: flex; align-items: center; justify-content: center;
+  }
+  #touchBrake .touchRing { border-color: #e33a3a; color: #e33a3a; }
+  #touchGas .touchRing { border-color: #3ad65a; color: #3ad65a; }
   #touchLeanUp, #touchLeanDown {
     left: 50%; transform: translateX(-50%); width: 74px; height: 58px;
     background: rgba(0,0,0,0.22); border-radius: 10px; font-size: 22px;
@@ -198,7 +207,7 @@
   <button id="startBtn">STARTA</button>
   <button id="installBtn">📲 Installera som app</button>
   <div style="margin-top:16px;font-size:12px;color:#999;max-width:320px;line-height:1.6;">
-    ← Broms &nbsp;|&nbsp; → Gasa &nbsp;|&nbsp; ↑↓ Luta i luften &nbsp;|&nbsp;
+    ← Broms &nbsp;|&nbsp; → Gasa &nbsp;|&nbsp; ↑↓ Luta fram/bak &nbsp;|&nbsp;
     SHIFT Stå upp &nbsp;|&nbsp; MELLANSLAG Hoppa &nbsp;|&nbsp; R Starta om
   </div>
   <div id="startCredits">v<span id="versionStart"></span> · av Cyberbob &amp; Risingbob</div>
@@ -211,14 +220,14 @@
 <div id="staminaWrap"><div id="staminaBar"></div></div>
 <div id="staminaLabel">Ork: <span id="staminaPct">100</span>%</div>
 <div id="msg"></div>
-<div id="controls">← Broms / Baklänges &nbsp;|&nbsp; → Gasa &nbsp;|&nbsp; ↑ Wheelie &nbsp;|&nbsp; ↓ Luta framåt &nbsp;|&nbsp; SHIFT Stå upp &nbsp;|&nbsp; MELLANSLAG Hoppa &nbsp;|&nbsp; R Starta om</div>
+<div id="controls">← Broms / Baklänges &nbsp;|&nbsp; → Gasa &nbsp;|&nbsp; ↑ Luta bakåt &nbsp;|&nbsp; ↓ Luta framåt &nbsp;|&nbsp; SHIFT Stå upp &nbsp;|&nbsp; MELLANSLAG Hoppa &nbsp;|&nbsp; R Starta om</div>
 <button id="musicToggle">🔊 Musik</button>
 <button id="sfxToggle">💥 SFX</button>
 
 <!-- ---------- Touch-kontroller (mobil) ---------- -->
 <div id="touchControls" style="display:none;">
-  <div class="touchZone" id="touchBrake">← BROMS</div>
-  <div class="touchZone" id="touchGas">GASA →</div>
+  <div class="touchZone" id="touchBrake"><div class="touchRing">◀</div><span style="font-size:11px;">BROMS</span></div>
+  <div class="touchZone" id="touchGas"><div class="touchRing">▶</div><span style="font-size:11px;">GAS</span></div>
   <div class="touchZone" id="touchLeanUp">↑</div>
   <div class="touchZone" id="touchLeanDown">↓</div>
   <div class="touchZone" id="touchJump">⤒ HOPPA</div>
@@ -237,9 +246,18 @@ window.addEventListener('resize', resize); resize();
 // ---------- Version / Credits ----------
 // Höj VERSION varje gång ni gör en ändring så syns det i spelet att det är
 // en ny build. Lägg en rad i CHANGELOG.md också (senaste först).
-const VERSION = '1.7.0';
+const VERSION = '1.8.0';
 const CREDITS = 'Cyberbob & Risingbob';
 const CHANGELOG = [
+  '1.8.0 – Förenklat kontrollerna efter inspiration från Mad Skills Motocross: ' +
+    'tog bort den separata wheelie-mekaniken (specialläge med egen ork-kostnad ' +
+    'och maxgräns). Luta fram/bak (↑/↓) fungerar nu HELA TIDEN, både på marken ' +
+    'och i luften, precis som viktförskjutning på en riktig cykel - lutar du ' +
+    'bakåt med fart lyfter framhjulet naturligt genom fysiken istället för via ' +
+    'ett separat påslaget läge. Touch-knapparna för gas/broms har nu tydliga ' +
+    'röda/gröna ringar (samma visuella språk som referensen) medan de ' +
+    'fortfarande är stora tap-zoner för träffsäkerhet. 80-tals retro-känslan ' +
+    'är oförändrad.',
   '1.7.0 – KRITISK FIX: kameran följde bara horisontellt, inte vertikalt. När ' +
     'banan klättrar tillräckligt högt hamnade spelaren ovanför synfältet och ' +
     '"försvann" (skärmen blev bara en enda jordfärgad yta). Kameran följer nu ' +
@@ -544,8 +562,7 @@ function resetState(){
     standing: false,
     lowStaminaWarned: false,
     bonkedOut: false,
-    crashTimer: 0,
-    wheelieOffset: 0
+    crashTimer: 0
   };
   document.getElementById('msg').style.display = 'none';
 }
@@ -641,7 +658,6 @@ function update(dt){
   const ACCEL = 900;
   const BRAKE = 700;
   const MAX_SPEED = 620;
-  const AIR_ROTATE_SPEED = 3.4;
 
   // ---- Stamina tuning ----
   const STAMINA_DRAIN_BASE = 5;
@@ -702,11 +718,13 @@ function update(dt){
 
   state.vy += GRAVITY*dt;
 
-  if (!state.onGround){
-    if (keys['ArrowUp']) state.angVel -= AIR_ROTATE_SPEED*dt*10;
-    if (keys['ArrowDown']) state.angVel += AIR_ROTATE_SPEED*dt*10;
-    state.angVel *= 0.99;
-  }
+  // Luta fram/bak - fungerar hela tiden (både på marken och i luften), som
+  // på en riktig cykel/motorcykel. Ingen separat "wheelie-knapp" - lutar du
+  // bakåt med fart lyfter framhjulet naturligt genom fysiken.
+  const LEAN_TORQUE = 3.0;
+  if (keys['ArrowUp']) state.angVel -= LEAN_TORQUE*dt*10;
+  if (keys['ArrowDown']) state.angVel += LEAN_TORQUE*dt*10;
+  state.angVel *= state.onGround ? 0.90 : 0.99;
 
   state.x += state.vx*dt;
   state.y += state.vy*dt;
@@ -738,17 +756,6 @@ function update(dt){
     const naturalAngle = Math.atan2(groundFront - groundRear, fx - rx);
     const groundC = (groundFront + groundRear) / 2 - 20;
 
-    // Aktiv wheelie: håll ↑ med lite fart så lyfts framhjulet aktivt,
-    // istället för att vinkeln bara passivt följer markens lutning
-    const WHEELIE_MAX = 0.9;
-    if (keys['ArrowUp'] && state.vx > 80){
-      state.wheelieOffset = Math.min(WHEELIE_MAX, state.wheelieOffset + dt*1.8);
-      state.stamina = Math.max(0, state.stamina - 6*dt);
-    } else {
-      state.wheelieOffset = Math.max(0, state.wheelieOffset - dt*2.5);
-    }
-    const targetAngle = naturalAngle - state.wheelieOffset;
-
     const penetration = state.y - groundC;
     if (penetration > 0){
       state.vy -= penetration * 40;
@@ -756,10 +763,11 @@ function update(dt){
       state.y = groundC;
     }
 
-    const angDiff = targetAngle - state.angle;
-    state.angVel += angDiff * 18 * dt * 60 * dt;
-    state.angle += angDiff * Math.min(1, 12*dt);
-    state.angVel *= 0.7;
+    // Svag "självrätande" fjäder mot markens vinkel - stark nog att kännas
+    // stabil vid vanlig körning, men svag nog att aktiv lutning (↑/↓)
+    // kan övervinna den för en riktig wheelie eller nos-ner
+    const angDiff = naturalAngle - state.angle;
+    state.angle += angDiff * Math.min(1, 4*dt);
 
     // Krascha bara om felvinkeln är stor OCH håller i sig en liten stund -
     // en enstaka frame med stort fel (t.ex. vid en kulltopp) ska inte
@@ -773,7 +781,6 @@ function update(dt){
   } else {
     state.onGround = false;
     state.crashTimer = Math.max(0, state.crashTimer - dt*2);
-    state.wheelieOffset = Math.max(0, state.wheelieOffset - dt*2);
   }
 
   if (!wasOnGround && state.onGround && !state.crashed){

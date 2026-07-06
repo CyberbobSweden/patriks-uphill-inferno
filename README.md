@@ -1,6 +1,6 @@
 # 🔥 Patriks Uphill Inferno
 
-**v1.7.0** · Gjort av **Cyberbob & Risingbob** · se [CHANGELOG.md](CHANGELOG.md)
+**v1.8.0** · Gjort av **Cyberbob & Risingbob** · se [CHANGELOG.md](CHANGELOG.md)
 för versionshistorik.
 
 Fysikbaserat 2D mountainbike-spel i Kick Start/Trials-stil. Ingen pedal-animation
@@ -58,9 +58,10 @@ och gå till `localhost:8000`.
 ## Kontroller
 - **→** Gasa
 - **←** Broms / baklänges
-- **↑** Wheelie – på marken med tillräcklig fart lyfter detta aktivt
-  framhjulet (kostar lite ork). I luften lutar det cykeln bakåt istället.
-- **↓** Luta framåt – funkar i luften (nos-dyk för landningskontroll)
+- **↑** Luta bakåt – fungerar både på marken och i luften. Med tillräcklig
+  fart lyfter framhjulet naturligt (ingen separat "wheelie-knapp" längre,
+  det är bara viktförskjutning som på en riktig cykel)
+- **↓** Luta framåt – funkar överallt, bra för nos-ner och landningskontroll
 - **SHIFT** (håll + →) Stå upp och trampa – mer kraft, dränerar ork snabbare
 - **MELLANSLAG** Hoppa – ett hopp rakt upp, kostar lite ork. Bra för att ta
   dig över vatten/hinder utan att behöva träffa en ramp.
