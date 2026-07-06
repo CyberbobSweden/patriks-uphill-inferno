@@ -110,6 +110,11 @@
   }
   #touchLeanUp { bottom: 128px; }
   #touchLeanDown { bottom: 58px; }
+  #touchJump {
+    left: 50%; transform: translateX(-50%); width: 74px; height: 50px;
+    background: rgba(255,183,3,0.22); border-radius: 10px; font-size: 12px;
+    bottom: 192px; color: rgba(255,220,120,0.9);
+  }
   #touchStand {
     left: 50%; transform: translateX(-95px); bottom: 12px;
     width: 84px; height: 40px; border-radius: 8px;
@@ -179,11 +184,22 @@
     </div>
   </div>
 
+  <div class="startPanel" style="text-align:left;">
+    <h2>Så funkar orken</h2>
+    <div style="font-size:12.5px;color:#ccc;line-height:1.7;">
+      Orken tar bara slut när du <b>gasar i uppförsbacke</b> - ju brantare,
+      desto snabbare. Släpp gasen eller åk nedför så återhämtas den. Blir den
+      slut orkar du inte längre attackera branta partier (men stannar inte
+      helt). SHIFT ger mer kraft men dränerar snabbare. Hopp kostar också
+      lite ork.
+    </div>
+  </div>
+
   <button id="startBtn">STARTA</button>
   <button id="installBtn">📲 Installera som app</button>
   <div style="margin-top:16px;font-size:12px;color:#999;max-width:320px;line-height:1.6;">
     ← Broms &nbsp;|&nbsp; → Gasa &nbsp;|&nbsp; ↑↓ Luta i luften &nbsp;|&nbsp;
-    SHIFT Stå upp &nbsp;|&nbsp; R Starta om
+    SHIFT Stå upp &nbsp;|&nbsp; MELLANSLAG Hoppa &nbsp;|&nbsp; R Starta om
   </div>
   <div id="startCredits">v<span id="versionStart"></span> · av Cyberbob &amp; Risingbob</div>
 </div>
@@ -195,7 +211,7 @@
 <div id="staminaWrap"><div id="staminaBar"></div></div>
 <div id="staminaLabel">Ork: <span id="staminaPct">100</span>%</div>
 <div id="msg"></div>
-<div id="controls">← Broms / Baklänges &nbsp;|&nbsp; → Gasa &nbsp;|&nbsp; ↑ Luta bakåt (wheelie) &nbsp;|&nbsp; ↓ Luta framåt &nbsp;|&nbsp; SHIFT Stå upp (mer kraft, mer ork) &nbsp;|&nbsp; R Starta om</div>
+<div id="controls">← Broms / Baklänges &nbsp;|&nbsp; → Gasa &nbsp;|&nbsp; ↑ Wheelie &nbsp;|&nbsp; ↓ Luta framåt &nbsp;|&nbsp; SHIFT Stå upp &nbsp;|&nbsp; MELLANSLAG Hoppa &nbsp;|&nbsp; R Starta om</div>
 <button id="musicToggle">🔊 Musik</button>
 <button id="sfxToggle">💥 SFX</button>
 
@@ -205,6 +221,7 @@
   <div class="touchZone" id="touchGas">GASA →</div>
   <div class="touchZone" id="touchLeanUp">↑</div>
   <div class="touchZone" id="touchLeanDown">↓</div>
+  <div class="touchZone" id="touchJump">⤒ HOPPA</div>
   <div class="touchZone" id="touchStand">STÅ UPP</div>
   <div class="touchZone" id="touchRestart">↻ OM</div>
 </div>
@@ -220,9 +237,17 @@ window.addEventListener('resize', resize); resize();
 // ---------- Version / Credits ----------
 // Höj VERSION varje gång ni gör en ändring så syns det i spelet att det är
 // en ny build. Lägg en rad i CHANGELOG.md också (senaste först).
-const VERSION = '1.6.1';
+const VERSION = '1.7.0';
 const CREDITS = 'Cyberbob & Risingbob';
 const CHANGELOG = [
+  '1.7.0 – KRITISK FIX: kameran följde bara horisontellt, inte vertikalt. När ' +
+    'banan klättrar tillräckligt högt hamnade spelaren ovanför synfältet och ' +
+    '"försvann" (skärmen blev bara en enda jordfärgad yta). Kameran följer nu ' +
+    'även vertikalt. Samma sorts bugg fixad i "föll av banan"-kollisionen (var ' +
+    'ett fast tal, är nu relativt till lokal marknivå). Nytt: ' +
+    'MELLANSLAG/hopp-knapp för att aktivt hoppa (kostar lite ork) - bra för ' +
+    'att ta sig över vatten/hinder utan att behöva träffa en ramp. ' +
+    'Förtydligat ork-systemet med en kort förklaring på startskärmen.',
   '1.6.1 – HOTFIX: en lös extra måsvinge/klammer (}) i koden gjorde att hela ' +
     'spelet vägrade starta (JavaScript-syntaxfel, STARTA-knappen gjorde inget). ' +
     'Verifierad med Node.js syntax-check innan release denna gång. Även tagit ' +
@@ -531,8 +556,19 @@ const keys = {};
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
   if (e.code === 'KeyR') resetState();
+  if (e.code === 'Space') { e.preventDefault(); tryJump(); }
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+function tryJump(){
+  if (state.crashed || !state.onGround) return;
+  const JUMP_COST = 10;
+  if (state.stamina < JUMP_COST) return; // för slut för att orka hoppa
+  state.stamina -= JUMP_COST;
+  state.vy = -430;
+  state.onGround = false;
+  sfxJump();
+}
 
 // ---------- Touch-kontroller (mobil) ----------
 // Visas bara på enheter med touch (inte i vägen för musanvändare på dator)
@@ -575,8 +611,17 @@ bindTouchZone('touchLeanDown', 'ArrowDown');
 bindTouchZone('touchStand', 'ShiftLeft');
 bindTouchZone('touchRestart', 'KeyR', true);
 
+document.getElementById('touchJump').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  tryJump();
+  const el = e.currentTarget;
+  el.classList.add('active');
+  setTimeout(() => el.classList.remove('active'), 120);
+});
+
 // ---------- Camera ----------
 let camX = 0;
+let camY = 0;
 
 // ---------- Main loop ----------
 let lastT = performance.now();
@@ -757,7 +802,9 @@ function update(dt){
     crash();
   }
 
-  if (state.y > 1200){
+  // Föll ner i ett hål/vatten och kom aldrig upp - relativt till lokal mark,
+  // inte ett absolut Y-värde (banans höjd ändras ju mycket över hela sträckan)
+  if (state.y > groundY(state.x) + 500){
     crash();
   }
 
@@ -771,6 +818,7 @@ function update(dt){
   }
 
   camX = state.x - innerWidth*0.35;
+  camY = state.y - innerHeight*0.55;
 }
 
 function crash(){
@@ -843,19 +891,20 @@ function render(){
   }
 
   ctx.save();
-  ctx.translate(-camX, 0);
+  ctx.translate(-camX, -camY);
 
   // Marken: ritas segment för segment så bro/vatten och grus kan få egen
   // yta istället för att vara samma upprepade jord-gradient överallt
   const startX = Math.max(0, camX-100);
   const endX = camX + w + 100;
   const step = 12;
+  const bottomY = camY + h + 400; // alltid långt under synligt område, oavsett camY
 
-  const dirtGrad = ctx.createLinearGradient(0, groundY(startX)-10, 0, h+400);
+  const dirtGrad = ctx.createLinearGradient(0, groundY(startX)-10, 0, bottomY);
   dirtGrad.addColorStop(0, '#8a5a34');
   dirtGrad.addColorStop(0.15, '#6b4a2f');
   dirtGrad.addColorStop(1, '#3d2a1c');
-  const gravelGrad = ctx.createLinearGradient(0, groundY(startX)-10, 0, h+400);
+  const gravelGrad = ctx.createLinearGradient(0, groundY(startX)-10, 0, bottomY);
   gravelGrad.addColorStop(0, '#9a9690');
   gravelGrad.addColorStop(0.15, '#77726b');
   gravelGrad.addColorStop(1, '#45413c');
@@ -869,10 +918,10 @@ function render(){
     ctx.beginPath();
     ctx.moveTo(wx0, waterTop);
     for (let x=wx0; x<=wx1; x+=step) ctx.lineTo(x, waterTop + Math.sin(x*0.08)*3);
-    ctx.lineTo(wx1, h+400);
-    ctx.lineTo(wx0, h+400);
+    ctx.lineTo(wx1, bottomY);
+    ctx.lineTo(wx0, bottomY);
     ctx.closePath();
-    const waterGrad = ctx.createLinearGradient(0, waterTop, 0, h+400);
+    const waterGrad = ctx.createLinearGradient(0, waterTop, 0, bottomY);
     waterGrad.addColorStop(0, '#5aa3c9');
     waterGrad.addColorStop(1, '#1f4f66');
     ctx.fillStyle = waterGrad;
@@ -886,8 +935,8 @@ function render(){
     ctx.beginPath();
     ctx.moveTo(x, y1);
     ctx.lineTo(x2, y2);
-    ctx.lineTo(x2, h+400);
-    ctx.lineTo(x, h+400);
+    ctx.lineTo(x2, bottomY);
+    ctx.lineTo(x, bottomY);
     ctx.closePath();
     if (isInBridge(x)){
       ctx.fillStyle = '#7a5636'; // brygg-plankor, mörkare varmt trä

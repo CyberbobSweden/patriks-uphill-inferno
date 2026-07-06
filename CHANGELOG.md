@@ -6,6 +6,19 @@ Versionsnumret syns i spelet (uppe till höger, och på startskärmen) samt i
 webbläsarens konsol (F12) vid start. Höj `VERSION` i `index.html` varje gång
 ni ändrar något så syns det att en ny build är uppladdad.
 
+## v1.7.0
+- **Kritisk fix:** kameran följde bara banan i sidled, inte på höjden. Eftersom
+  v1.6.0 lade till en riktig uppförsbacke klättrade banan så pass högt att
+  spelaren till slut hamnade ovanför synfältet och "försvann" ur bild (synligt
+  som en enda jordfärgad yta som täckte hela skärmen). Kameran följer nu även
+  vertikalt.
+- Samma typ av bugg fanns i "föll av banan"-kollisionen (ett fast Y-värde
+  istället för relativt till lokal marknivå) - fixad på samma sätt.
+- **Nytt: manuellt hopp** (MELLANSLAG på dator, egen knapp på mobil) - ger ett
+  hopp rakt upp, kostar lite ork. Bra för att aktivt ta sig över vatten/hinder
+  istället för att bara förlita sig på ramperna.
+- Ork-systemet förklaras nu kort direkt på startskärmen.
+
 ## v1.6.1 (hotfix)
 - En lös extra klammer (`}`) hade smugit sig in i koden under förra
   uppdateringen, vilket gav ett JavaScript-syntaxfel i webbläsaren och
