@@ -1,6 +1,6 @@
 # 🔥 Patriks Uphill Inferno
 
-**v1.6.0** · Gjort av **Cyberbob & Risingbob** · se [CHANGELOG.md](CHANGELOG.md)
+**v1.6.1** · Gjort av **Cyberbob & Risingbob** · se [CHANGELOG.md](CHANGELOG.md)
 för versionshistorik.
 
 Fysikbaserat 2D mountainbike-spel i Kick Start/Trials-stil. Ingen pedal-animation

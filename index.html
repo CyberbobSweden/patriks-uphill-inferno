@@ -9,6 +9,7 @@
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Uphill Inferno">
 <style>
@@ -219,9 +220,13 @@ window.addEventListener('resize', resize); resize();
 // ---------- Version / Credits ----------
 // Höj VERSION varje gång ni gör en ändring så syns det i spelet att det är
 // en ny build. Lägg en rad i CHANGELOG.md också (senaste först).
-const VERSION = '1.6.0';
+const VERSION = '1.6.1';
 const CREDITS = 'Cyberbob & Risingbob';
 const CHANGELOG = [
+  '1.6.1 – HOTFIX: en lös extra måsvinge/klammer (}) i koden gjorde att hela ' +
+    'spelet vägrade starta (JavaScript-syntaxfel, STARTA-knappen gjorde inget). ' +
+    'Verifierad med Node.js syntax-check innan release denna gång. Även tagit ' +
+    'bort en mindre webbläsar-varning (mobile-web-app-capable).',
   '1.6.0 – Stor uppdatering baserat på speltest-feedback: ' +
     '(1) Parallax-bakgrunden är nu procedurellt ritad (bergskedjor + moln som ' +
     'matematiska funktioner) istället för en upprepad bild - kan aldrig få en ' +
@@ -497,7 +502,6 @@ const TREES = [];
     });
   }
 })();
-}
 
 // ---------- Bike physics state ----------
 const WHEEL_BASE = 46;

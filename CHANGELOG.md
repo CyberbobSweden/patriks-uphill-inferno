@@ -6,6 +6,15 @@ Versionsnumret syns i spelet (uppe till höger, och på startskärmen) samt i
 webbläsarens konsol (F12) vid start. Höj `VERSION` i `index.html` varje gång
 ni ändrar något så syns det att en ny build är uppladdad.
 
+## v1.6.1 (hotfix)
+- En lös extra klammer (`}`) hade smugit sig in i koden under förra
+  uppdateringen, vilket gav ett JavaScript-syntaxfel i webbläsaren och
+  gjorde att **hela spelet vägrade starta** (STARTA-knappen gjorde ingenting).
+  Hittad och borttagen. Har nu även lagt in en Node.js syntax-koll som steg
+  innan jag skickar en ny version, för att undvika att detta händer igen.
+- Mindre fix: en webbläsar-deprecation-varning (`apple-mobile-web-app-capable`)
+  tystad genom att lägga till den moderna motsvarigheten också.
+
 ## v1.6.0
 Stor uppdatering efter speltest-feedback (7 separata punkter, alla adresserade):
 
