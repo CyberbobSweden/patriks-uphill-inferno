@@ -1,6 +1,6 @@
 # 🔥 Patriks Uphill Inferno
 
-**v1.5.0** · Gjort av **Cyberbob & Risingbob** · se [CHANGELOG.md](CHANGELOG.md)
+**v1.6.0** · Gjort av **Cyberbob & Risingbob** · se [CHANGELOG.md](CHANGELOG.md)
 för versionshistorik.
 
 Fysikbaserat 2D mountainbike-spel i Kick Start/Trials-stil. Ingen pedal-animation
@@ -20,20 +20,36 @@ Patriks Uphill Inferno/
 │   └── workflows/
 │       └── deploy.yml
 └── assets/
-    ├── bike_idle.png
-    ├── bg_day.png
-    ├── terrain_tile.png
     ├── crash1.png
+    ├── tree_round.png
+    ├── tree_pine.png
     ├── icon-192.png
     ├── icon-512.png
+    ├── bike_frames/
+    │   ├── frame0.png ... frame8.png   (pedal-animationens 9 frames)
     └── audio/
         └── bgmusic.mp3
 ```
-`index.html` letar efter bilder i `assets/` och musik i `assets/audio/` — om
-den här strukturen inte stämmer exakt blir det tomma rutor/ingen musik även
-om sidan i övrigt fungerar. `manifest.json` och `service-worker.js` måste
-ligga i **rotmappen** (samma nivå som `index.html`), annars fungerar inte
-"installera som app".
+Bakgrund och mark ritas numera procedurellt i koden (inga bildfiler för
+det längre) - därför är `bg_day.png`/`terrain_tile.png` borttagna.
+`manifest.json` och `service-worker.js` måste ligga i **rotmappen** (samma
+nivå som `index.html`), annars fungerar inte "installera som app".
+
+## Sprite-pipeline (hur man fixar/byter cykel-grafik framöver)
+Cykel-animationen kommer från `assets/bike_frames/frame0.png` till `frame8.png`,
+uppspelade i ordning baserat på fart (se `bikeFrames`/`animFrame` i
+`index.html`). Om en sprite ser fel ut (fel beskuren, artefakter från
+grannsprites, fel storlek):
+1. Originalarket (sprite-sheet med alla poser) heter `Cyberbob_massive.png`
+2. Varje frame är beskuren med fasta pixel-koordinater (finns som `boxes`-listan
+   i vår beskärningskod) + en automatisk "ta bort lösa pixel-öar"-koddel som
+   städar bort artefakter från grannsprites
+3. Vill du byta ut en specifik frame: ersätt bara `assets/bike_frames/frameN.png`
+   med en ny bild av samma ungefärliga storlek (~92×98px), och justera
+   `BIKE_FRAME_GROUND_OFFSET[N]` i `index.html` om hjulen inte vilar rätt mot
+   marken (formeln är `20 - bildens_understa_pixel_med_innehåll`)
+Säg bara till i chatten "frame X ser fel ut" så fixar jag om den, det är ett
+par rader kod nu istället för att behöva bygga om hela pipelinen.
 
 ## Kör lokalt
 Öppna `index.html` i webbläsaren, eller kör `python3 -m http.server` i mappen
@@ -42,14 +58,21 @@ och gå till `localhost:8000`.
 ## Kontroller
 - **→** Gasa
 - **←** Broms / baklänges
-- **↑** Luta bakåt (wheelie) – funkar i luften
-- **↓** Luta framåt – funkar i luften
+- **↑** Wheelie – på marken med tillräcklig fart lyfter detta aktivt
+  framhjulet (kostar lite ork). I luften lutar det cykeln bakåt istället.
+- **↓** Luta framåt – funkar i luften (nos-dyk för landningskontroll)
 - **SHIFT** (håll + →) Stå upp och trampa – mer kraft, dränerar ork snabbare
 - **R** Starta om
 
 **På mobil/touch:** samma kontroller finns som stora tap-zoner på skärmen
 (vänster/höger halva = broms/gas, mittenknappar = luta/stå upp/starta om).
 Dyker bara upp på touch-enheter, syns inte på dator.
+
+## Banan
+- Går på riktigt uppför (nettostigning), inte bara vågformat fram och tillbaka
+- En bro över vatten (~x=2150–2500) och två grusparti längs vägen
+- Träd utspridda hela vägen för lite liv i scenen
+- Fyra hopp-ramper (rundade, inte spetsiga - se Ork-systemet nedan för varför)
 
 ## Ork-systemet ("stamina")
 - Dräneras bara när du **gasar i uppförsbacke** – ju brantare, desto snabbare.

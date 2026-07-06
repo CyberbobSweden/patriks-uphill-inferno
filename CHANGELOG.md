@@ -6,6 +6,34 @@ Versionsnumret syns i spelet (uppe till höger, och på startskärmen) samt i
 webbläsarens konsol (F12) vid start. Höj `VERSION` i `index.html` varje gång
 ni ändrar något så syns det att en ny build är uppladdad.
 
+## v1.6.0
+Stor uppdatering efter speltest-feedback (7 separata punkter, alla adresserade):
+
+1. **Parallax såg "sektionerad" ut** – bakgrunden är nu procedurellt ritad
+   (bergskedjor + moln beräknas matematiskt utifrån position i banan) istället
+   för en upprepad bild. Kan aldrig ge en synlig skarv, oavsett avstånd.
+2. **Cykeln red inte på gräset** – hittad exakt rotorsak: spriten ritades
+   ~35px för lågt. Fixat, hjulen vilar nu på ytan. La även till en **bro över
+   vatten** och **två grusparti** längs banan.
+3. **Kändes inte som uppförsbacke** – terrängen gick tidigare bara upp och ner
+   till samma nivå (vågform utan nettostigning). Nu finns en riktig,
+   kontinuerlig stigning över hela banan.
+4. **Inga träd/detaljer längs banan** – trädlagt utspritt längs hela sträckan
+   (två sorters träd, med enkel djup-effekt).
+5. **Wheelie syntes inte/gick inte göra** – nu en riktig mekanik: håll ↑ på
+   marken med tillräcklig fart för att aktivt lyfta framhjulet, inte bara
+   passiv lutning efter markens vinkel.
+6. **Cykeln såg stillastående ut + löst bakhjul syntes** – två separata fixar:
+   dels en riktig **9-frames pedal-animation** (fanns redan i källarket, bara
+   outnyttjad), dels en lös pixel-rest (från nästa cykel i arket) som råkat
+   följa med i en tidigare beskärning – borttagen.
+7. **Ork kändes overksam** – kraft/ork påverkade tidigare bara *hur snabbt*
+   man accelererade, inte *om* man faktiskt kunde ta sig uppför (ingen
+   motkraft från lutningen fanns i fysiken). Lagt till en riktig
+   gravitationskomponent längs backen, så branta partier nu kräver kraft på
+   riktigt - och sänkt kraft-golvet vid tom ork så en "bonk" känns tydlig och
+   bestämd istället för att bara vara lite segare.
+
 ## v1.5.0
 - **Touch-kontroller för mobil**, byggda efter samma mönster som Hill Climb
   Racing och liknande fysikbaserade mobilspel använder (efter research på hur

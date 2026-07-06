@@ -219,9 +219,31 @@ window.addEventListener('resize', resize); resize();
 // ---------- Version / Credits ----------
 // Höj VERSION varje gång ni gör en ändring så syns det i spelet att det är
 // en ny build. Lägg en rad i CHANGELOG.md också (senaste först).
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 const CREDITS = 'Cyberbob & Risingbob';
 const CHANGELOG = [
+  '1.6.0 – Stor uppdatering baserat på speltest-feedback: ' +
+    '(1) Parallax-bakgrunden är nu procedurellt ritad (bergskedjor + moln som ' +
+    'matematiska funktioner) istället för en upprepad bild - kan aldrig få en ' +
+    'synlig skarv oavsett hur långt man åker. ' +
+    '(2) Cykeln red ~35px för lågt (under gräslinjen) - hittad och fixad, ' +
+    'hjulen vilar nu exakt på ytan. ' +
+    '(3) Banan går nu på riktigt uppför (nettostigning), inte bara vågformat ' +
+    'fram och tillbaka till samma nivå. ' +
+    '(4) Ny bro över vatten samt två grusparti, plus träd utspridda längs ' +
+    'hela banan. ' +
+    '(5) Riktig wheelie: håll ↑ på marken med fart för att aktivt lyfta ' +
+    'framhjulet (inte bara passiv lutning efter terrängen). ' +
+    '(6) Cykeln har nu en riktig pedal-animation (9 frames, hastigheten på ' +
+    'trampningen styr farten på animationen) istället för en fryst stillbild ' +
+    '- upptäckte att source-arket redan hade frames för detta. ' +
+    '(7) Hittade och tog bort en lös pixel-rest (nästa cykel i arket som ' +
+    'bläckt in i beskärningen) - det var den "extra bakhjuls"-artefakt som syntes. ' +
+    '(8) Ork/backe-fysiken var overksam (kraft påverkade bara hur snabbt man ' +
+    'accelererade, inte om man faktiskt kunde ta sig uppför) - lagt till en ' +
+    'riktig gravitationskomponent längs lutningen så branta backar nu kräver ' +
+    'kraft på riktigt, och sänkt "bonk"-golvet så det känns tydligt när orken ' +
+    'tar slut.',
   '1.5.0 – Touch-kontroller för mobil: stora tap-zoner för gas/broms (samma ' +
     'mönster som Hill Climb Racing m.fl. använder), knappar för luta fram/bak ' +
     'i luften, stå-upp och starta om. Stödjer flera fingrar samtidigt (t.ex. ' +
@@ -393,26 +415,60 @@ document.getElementById('startBtn').addEventListener('click', () => {
 });
 
 // ---------- Load assets ----------
-const bikeImg = new Image(); bikeImg.src = 'assets/bike_idle.png';
+const bikeFrames = [];
+for (let i=0;i<9;i++){
+  const im = new Image();
+  im.src = `assets/bike_frames/frame${i}.png`;
+  bikeFrames.push(im);
+}
+const BIKE_FRAME_GROUND_OFFSET = [-73,-73,-73,-74,-75,-76,-74,-76,-74];
+let animFrame = 0;
+let animTimer = 0;
+
 const crashImg = new Image(); crashImg.src = 'assets/crash1.png';
-const bgImg = new Image(); bgImg.src = 'assets/bg_day.png';
-const tileImg = new Image(); tileImg.src = 'assets/terrain_tile.png';
+const treeRoundImg = new Image(); treeRoundImg.src = 'assets/tree_round.png';
+const treePineImg = new Image(); treePineImg.src = 'assets/tree_pine.png';
 
 // ---------- Terrain ----------
 const TRACK_LENGTH = 8000;
+// Speciella zoner längs banan: grus (syns, ingen fysik-skillnad än) och en
+// bro över vatten. Används både av groundY (för att platta ut ytan över
+// bron) och av rendering (för att rita rätt yta).
+const BRIDGE_ZONE = { start: 2150, end: 2500 };
+const GRAVEL_ZONES = [ { start: 4100, end: 4500 }, { start: 6300, end: 6650 } ];
+
+function isInBridge(x){ return x >= BRIDGE_ZONE.start && x <= BRIDGE_ZONE.end; }
+function isInGravel(x){
+  for (const g of GRAVEL_ZONES) if (x >= g.start && x <= g.end) return true;
+  return false;
+}
+
 function groundY(x){
   if (x < 300) return 500;
+
+  // Bron är plan (en rak brygga över vattnet), annars normal terräng
+  if (isInBridge(x)){
+    const t0 = groundYRaw(BRIDGE_ZONE.start);
+    const t1 = groundYRaw(BRIDGE_ZONE.end);
+    const t = (x - BRIDGE_ZONE.start) / (BRIDGE_ZONE.end - BRIDGE_ZONE.start);
+    return t0 + (t1 - t0) * t;
+  }
+  return groundYRaw(x);
+}
+
+function groundYRaw(x){
   let y = 500;
-  y -= Math.sin(x*0.0025) * 60;
-  y -= Math.sin(x*0.0009 + 1.3) * 120;
-  y -= Math.sin(x*0.006 + 2.0) * 25;
+  // Rullande kullar (variation)
+  y -= Math.sin(x*0.0025) * 45;
+  y -= Math.sin(x*0.006 + 2.0) * 20;
+  // Riktig nettostigning uppför - detta är kärnan i "uppförsbacke"-känslan
+  y -= Math.min(Math.max(0, x-300), TRACK_LENGTH) * 0.085;
+
   const rampCenters = [1800, 3600, 5400, 7000];
   for (const c of rampCenters){
     const d = x - c;
     const halfWidth = 160;
     if (d > -halfWidth && d < halfWidth){
-      // Mjuk rundad kulle (cosinus) istället för spetsig triangel -
-      // spetsiga toppar gav omöjliga vinkeländringar och krascher
       y -= (Math.cos((d/halfWidth) * Math.PI) + 1) * 0.5 * 130;
     }
   }
@@ -421,6 +477,26 @@ function groundY(x){
 function groundSlope(x){
   const h = 4;
   return (groundY(x+h) - groundY(x-h)) / (2*h);
+}
+
+// Träd längs banan (rent visuellt, ingen kollision) - fasta positioner så de
+// alltid dyker upp på samma ställe varje gång
+const TREES = [];
+(function generateTrees(){
+  for (let x = 500; x < TRACK_LENGTH - 200; x += 90 + (x % 3) * 40){
+    if (isInBridge(x) || isInGravel(x)) continue;
+    const seed = x * 12.9898;
+    const r = Math.abs(Math.sin(seed) * 43758.5453) % 1;
+    if (r < 0.55) continue; // gles utplacering
+    const side = (Math.abs(Math.sin(seed*3.1)) < 0.5) ? -1 : 1; // fram/bak i djupled (parallax-lager)
+    TREES.push({
+      x: x + (r-0.5)*60,
+      type: r > 0.78 ? 'pine' : 'round',
+      scale: 0.6 + (r % 0.3),
+      behind: side < 0 // vissa träd bakom banan (mindre, mörkare) för djup
+    });
+  }
+})();
 }
 
 // ---------- Bike physics state ----------
@@ -439,7 +515,8 @@ function resetState(){
     standing: false,
     lowStaminaWarned: false,
     bonkedOut: false,
-    crashTimer: 0
+    crashTimer: 0,
+    wheelieOffset: 0
   };
   document.getElementById('msg').style.display = 'none';
 }
@@ -543,7 +620,7 @@ function update(dt){
   state.standing = wantsStand && keys['ArrowRight'];
 
   if (keys['ArrowRight']) {
-    const powerMult = Math.max(0.35, Math.min(1, state.stamina / 35));
+    const powerMult = Math.max(0.15, Math.min(1, state.stamina / 35));
     const standMult = state.standing ? STANDING_POWER_MULT : 1;
     state.vx += ACCEL * powerMult * standMult * dt;
 
@@ -564,6 +641,14 @@ function update(dt){
       state.stamina = Math.min(100, state.stamina + (STAMINA_REGEN_BASE + downhillBonus)*dt);
     }
   }
+  // Gravitationskomponent längs lutningen - detta är det som gör att en
+  // brant backe faktiskt KRÄVER kraft för att ta sig uppför (och ger gratis
+  // fart nedför). Utan denna term spelade orken egentligen ingen roll för
+  // om du kunde ta dig uppför, bara hur snabbt du accelererade dit.
+  if (state.onGround){
+    state.vx += currentSlope * 620 * dt;
+  }
+
   state.vx = Math.max(-MAX_SPEED*0.5, Math.min(MAX_SPEED, state.vx));
 
   state.vy += GRAVITY*dt;
@@ -601,8 +686,19 @@ function update(dt){
     // brant/kuperad terräng)
     const groundFront = groundY(fx);
     const groundRear = groundY(rx);
-    const targetAngle = Math.atan2(groundFront - groundRear, fx - rx);
+    const naturalAngle = Math.atan2(groundFront - groundRear, fx - rx);
     const groundC = (groundFront + groundRear) / 2 - 20;
+
+    // Aktiv wheelie: håll ↑ med lite fart så lyfts framhjulet aktivt,
+    // istället för att vinkeln bara passivt följer markens lutning
+    const WHEELIE_MAX = 0.9;
+    if (keys['ArrowUp'] && state.vx > 80){
+      state.wheelieOffset = Math.min(WHEELIE_MAX, state.wheelieOffset + dt*1.8);
+      state.stamina = Math.max(0, state.stamina - 6*dt);
+    } else {
+      state.wheelieOffset = Math.max(0, state.wheelieOffset - dt*2.5);
+    }
+    const targetAngle = naturalAngle - state.wheelieOffset;
 
     const penetration = state.y - groundC;
     if (penetration > 0){
@@ -628,6 +724,7 @@ function update(dt){
   } else {
     state.onGround = false;
     state.crashTimer = Math.max(0, state.crashTimer - dt*2);
+    state.wheelieOffset = Math.max(0, state.wheelieOffset - dt*2);
   }
 
   if (!wasOnGround && state.onGround && !state.crashed){
@@ -660,6 +757,15 @@ function update(dt){
     crash();
   }
 
+  // Trampanimation - snabbare fart = snabbare pedaltakt. Nästan still =
+  // långsam "vänteposition"-växling istället för helt fryst.
+  const speedForAnim = Math.max(40, Math.abs(state.vx));
+  animTimer += dt * (speedForAnim / 130);
+  if (animTimer > 1){
+    animTimer -= 1;
+    animFrame = (animFrame + 1) % bikeFrames.length;
+  }
+
   camX = state.x - innerWidth*0.35;
 }
 
@@ -683,55 +789,146 @@ function render(){
   ctx.fillStyle = skyGrad;
   ctx.fillRect(0,0,w,h);
 
-  if (bgImg.complete && bgImg.naturalWidth){
-    const bw = 900, bh = bw * (bgImg.naturalHeight/bgImg.naturalWidth);
-    // Bilden har nu tonade (transparenta) kanter, så vi kan bara upprepa den
-    // rakt av utan att en skarv syns - liten överlappning extra säkerhet.
-    const spacing = bw * 0.94;
-    const parX = -(camX*0.25);
-    const startI = Math.floor((-parX - w) / spacing) - 1;
-    const endI = Math.ceil((-parX + w*2) / spacing) + 1;
-    for (let i=startI; i<=endI; i++){
-      ctx.drawImage(bgImg, parX + i*spacing, h*0.22, bw, bh);
+  // Procedurellt ritade bergskedjor istället för en upprepad bild - eftersom
+  // det här är en matematisk funktion av världs-x kan den aldrig få en
+  // synlig skarv, oavsett hur långt man åker.
+  function mountainRidge(x, seed, oct1, oct2){
+    return Math.sin(x*0.0009 + seed) * oct1 + Math.sin(x*0.0027 + seed*1.7) * oct2;
+  }
+  function drawMountainLayer(parallax, baseline, amp1, amp2, seed, colorTop, colorBottom){
+    const worldOffset = camX * parallax;
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    const step = 24;
+    for (let sx=0; sx<=w+step; sx+=step){
+      const wx = sx + worldOffset;
+      const y = baseline - amp1 - amp2 + mountainRidge(wx, seed, amp1, amp2);
+      ctx.lineTo(sx, y);
     }
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, baseline-amp1-amp2, 0, baseline+20);
+    grad.addColorStop(0, colorTop);
+    grad.addColorStop(1, colorBottom);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  const horizon = h*0.62;
+  drawMountainLayer(0.12, horizon-40, 70, 25, 11.3, '#a9c3d6', '#8aacc4'); // längst bort, ljusast
+  drawMountainLayer(0.22, horizon,    95, 35, 4.1,  '#7fa3c0', '#5f84a3'); // mitten
+  drawMountainLayer(0.38, horizon+55, 55, 20, 27.6, '#3f6b52', '#2c4f3c'); // närmast, mörk skoglinje
+
+  // Enkla, procedurella moln (samma princip - ingen upprepning möjlig)
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  const cloudSpacing = 420;
+  const cloudParallax = 0.08;
+  const cloudOffset = camX * cloudParallax;
+  const firstC = Math.floor((cloudOffset - 100) / cloudSpacing);
+  const lastC = Math.ceil((cloudOffset + w + 100) / cloudSpacing);
+  for (let i=firstC; i<=lastC; i++){
+    const cx = i*cloudSpacing - cloudOffset;
+    const seed = i*3.77;
+    const cy = h*0.12 + (Math.sin(seed)*0.5+0.5) * h*0.12;
+    const s = 26 + (Math.sin(seed*2.3)*0.5+0.5)*16;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, s*1.6, s*0.6, 0, 0, Math.PI*2);
+    ctx.ellipse(cx+s*0.9, cy+s*0.1, s*1.1, s*0.5, 0, 0, Math.PI*2);
+    ctx.ellipse(cx-s*0.8, cy+s*0.15, s*1.0, s*0.45, 0, 0, Math.PI*2);
+    ctx.fill();
   }
 
   ctx.save();
   ctx.translate(-camX, 0);
 
-  // Marken: gradient-fyllning istället för ett uppenbart upprepat rutmönster
+  // Marken: ritas segment för segment så bro/vatten och grus kan få egen
+  // yta istället för att vara samma upprepade jord-gradient överallt
   const startX = Math.max(0, camX-100);
   const endX = camX + w + 100;
-  ctx.beginPath();
-  ctx.moveTo(startX, h+400);
-  for (let x=startX; x<=endX; x+=12){
-    ctx.lineTo(x, groundY(x));
-  }
-  ctx.lineTo(endX, h+400);
-  ctx.closePath();
+  const step = 12;
+
   const dirtGrad = ctx.createLinearGradient(0, groundY(startX)-10, 0, h+400);
   dirtGrad.addColorStop(0, '#8a5a34');
   dirtGrad.addColorStop(0.15, '#6b4a2f');
   dirtGrad.addColorStop(1, '#3d2a1c');
-  ctx.fillStyle = dirtGrad;
-  ctx.fill();
+  const gravelGrad = ctx.createLinearGradient(0, groundY(startX)-10, 0, h+400);
+  gravelGrad.addColorStop(0, '#9a9690');
+  gravelGrad.addColorStop(0.15, '#77726b');
+  gravelGrad.addColorStop(1, '#45413c');
 
-  // Grästäckt kant längs ytan - tjockare grön linje med lite ojämnhet
-  ctx.beginPath();
-  ctx.moveTo(startX, groundY(startX));
-  for (let x=startX; x<=endX; x+=8){
-    ctx.lineTo(x, groundY(x) - 2 + Math.sin(x*0.35)*1.2);
+  // Vatten under bron - fylls först, hela zonens bredd, ner till en fast
+  // vattenyta strax under brygg-nivån
+  if (BRIDGE_ZONE.start < endX && BRIDGE_ZONE.end > startX){
+    const wx0 = Math.max(startX, BRIDGE_ZONE.start);
+    const wx1 = Math.min(endX, BRIDGE_ZONE.end);
+    const waterTop = groundYRaw(BRIDGE_ZONE.start) + 55;
+    ctx.beginPath();
+    ctx.moveTo(wx0, waterTop);
+    for (let x=wx0; x<=wx1; x+=step) ctx.lineTo(x, waterTop + Math.sin(x*0.08)*3);
+    ctx.lineTo(wx1, h+400);
+    ctx.lineTo(wx0, h+400);
+    ctx.closePath();
+    const waterGrad = ctx.createLinearGradient(0, waterTop, 0, h+400);
+    waterGrad.addColorStop(0, '#5aa3c9');
+    waterGrad.addColorStop(1, '#1f4f66');
+    ctx.fillStyle = waterGrad;
+    ctx.fill();
   }
-  ctx.strokeStyle = '#3f7a2e';
-  ctx.lineWidth = 9;
-  ctx.lineCap = 'round';
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(startX, groundY(startX));
-  for (let x=startX; x<=endX; x+=8) ctx.lineTo(x, groundY(x));
-  ctx.strokeStyle = '#2e5c1f';
-  ctx.lineWidth = 3;
-  ctx.stroke();
+
+  // Mark/bro/grus-yta, segment för segment
+  for (let x=startX; x<endX; x+=step){
+    const x2 = x+step;
+    const y1 = groundY(x), y2 = groundY(x2);
+    ctx.beginPath();
+    ctx.moveTo(x, y1);
+    ctx.lineTo(x2, y2);
+    ctx.lineTo(x2, h+400);
+    ctx.lineTo(x, h+400);
+    ctx.closePath();
+    if (isInBridge(x)){
+      ctx.fillStyle = '#7a5636'; // brygg-plankor, mörkare varmt trä
+    } else if (isInGravel(x)){
+      ctx.fillStyle = gravelGrad;
+    } else {
+      ctx.fillStyle = dirtGrad;
+    }
+    ctx.fill();
+  }
+
+  // Brygg-stöttor (vertikala pelare ner i vattnet) med jämna mellanrum
+  for (let x = Math.ceil(Math.max(startX,BRIDGE_ZONE.start)/110)*110; x < Math.min(endX,BRIDGE_ZONE.end); x+=110){
+    const topY = groundY(x);
+    ctx.fillStyle = '#5b3d24';
+    ctx.fillRect(x-6, topY, 12, 140);
+  }
+
+  // Överkant: gräs (normal mark), plankor (bro), eller grus-kant
+  for (let x=startX; x<endX; x+=step){
+    const x2 = x+step;
+    if (isInBridge(x)){
+      ctx.strokeStyle = '#4a3018';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(x, groundY(x)); ctx.lineTo(x2, groundY(x2)); ctx.stroke();
+      // plank-skarvar
+      if (Math.floor(x/22) !== Math.floor(x2/22)) {
+        ctx.strokeStyle = '#3a2412'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x2, groundY(x2)-3); ctx.lineTo(x2, groundY(x2)+6); ctx.stroke();
+      }
+    } else if (isInGravel(x)){
+      ctx.strokeStyle = '#57534d';
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(x, groundY(x)); ctx.lineTo(x2, groundY(x2)); ctx.stroke();
+    } else {
+      ctx.strokeStyle = '#3f7a2e';
+      ctx.lineWidth = 9; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x, groundY(x) - 2 + Math.sin(x*0.35)*1.2);
+      ctx.lineTo(x2, groundY(x2) - 2 + Math.sin(x2*0.35)*1.2);
+      ctx.stroke();
+      ctx.strokeStyle = '#2e5c1f'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x, groundY(x)); ctx.lineTo(x2, groundY(x2)); ctx.stroke();
+    }
+  }
 
   // Glesa gräs-tuvor ritade direkt på ytan (inte en sprite) - smälter in
   // naturligt i konturen istället för att se ut som lösa fläckar
@@ -745,8 +942,9 @@ function render(){
     const seed = i * 7.233;
     const r1 = Math.abs(Math.sin(seed) * 43758.5453) % 1;
     if (r1 < 0.4) continue; // gles, inte varenda position
-    const r2 = Math.abs(Math.sin(seed*2.1+1.7) * 12543.31) % 1;
     const tx = i*tuftSpacing + (r1-0.5)*tuftSpacing*0.8;
+    if (isInBridge(tx) || isInGravel(tx)) continue;
+    const r2 = Math.abs(Math.sin(seed*2.1+1.7) * 12543.31) % 1;
     const ty = groundY(tx) - 1;
     const bladeH = 6 + r2*7;
     for (let b=-1; b<=1; b++){
@@ -757,13 +955,28 @@ function render(){
     }
   }
 
+  // Träd längs banan (rent visuellt, ritas bakom cykeln)
+  for (const tree of TREES){
+    if (tree.x < startX - 150 || tree.x > endX + 150) continue;
+    const img = tree.type === 'pine' ? treePineImg : treeRoundImg;
+    if (!img.complete || !img.naturalWidth) continue;
+    const tw = img.naturalWidth * tree.scale;
+    const th = img.naturalHeight * tree.scale;
+    const groundAt = groundY(tree.x);
+    ctx.save();
+    if (tree.behind) ctx.globalAlpha = 0.55;
+    ctx.drawImage(img, tree.x - tw/2, groundAt - th + 6, tw, th);
+    ctx.restore();
+  }
+
   ctx.save();
   ctx.translate(state.x, state.y);
   if (!state.crashed){
     ctx.rotate(state.angle);
-    if (bikeImg.complete) ctx.drawImage(bikeImg, -bikeImg.width/2, -bikeImg.height/2 + 10);
+    const frame = bikeFrames[animFrame];
+    if (frame.complete) ctx.drawImage(frame, -frame.width/2, BIKE_FRAME_GROUND_OFFSET[animFrame]);
   } else {
-    if (crashImg.complete) ctx.drawImage(crashImg, -crashImg.width/2, -crashImg.height/2 + 20);
+    if (crashImg.complete) ctx.drawImage(crashImg, -crashImg.width/2, -74);
   }
   ctx.restore();
 
