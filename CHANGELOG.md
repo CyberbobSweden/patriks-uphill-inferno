@@ -6,6 +6,17 @@ Versionsnumret syns i spelet (uppe till höger, och på startskärmen) samt i
 webbläsarens konsol (F12) vid start. Höj `VERSION` i `index.html` varje gång
 ni ändrar något så syns det att en ny build är uppladdad.
 
+## v1.8.1
+- **Fixat att spriten vickade/flimrade konstant** (tack för att ni flaggade
+  detta - obehagligt att titta på i längden). Två separata orsaker hittade
+  och fixade:
+  1. Animationen fortsatte cykla igenom pedal-ramarna även när cykeln stod
+     helt still (koden tvingade fram en minimihastighet för animationen).
+     Fryser nu på en bildruta i vila.
+  2. De 9 animationsramarna har lite olika bredd (91-93px), vilket gav en
+     omärkbar men irriterande sidledes pixel-vickning varje gång bilden
+     bytte ram. Använder nu en fast center-referens för alla ramar istället.
+
 ## v1.8.0
 Förenklat kontrollerna efter referensbilder från Mad Skills Motocross:
 

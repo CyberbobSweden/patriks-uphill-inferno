@@ -246,9 +246,15 @@ window.addEventListener('resize', resize); resize();
 // ---------- Version / Credits ----------
 // Höj VERSION varje gång ni gör en ändring så syns det i spelet att det är
 // en ny build. Lägg en rad i CHANGELOG.md också (senaste först).
-const VERSION = '1.8.0';
+const VERSION = '1.8.1';
 const CREDITS = 'Cyberbob & Risingbob';
 const CHANGELOG = [
+  '1.8.1 – Fixat att spriten vickade/flimrade konstant: animationen fortsatte ' +
+    '"trampa" även när cykeln stod still (tvingad minimihastighet i ' +
+    'animationskoden) - fryser nu på en bildruta i vila istället. Tog även ' +
+    'bort en liten sidledes pixel-vickning som uppstod för att de 9 ' +
+    'animationsramarna hade lite olika bredd (91-93px) - använder nu en fast ' +
+    'center-referens för alla ramar.',
   '1.8.0 – Förenklat kontrollerna efter inspiration från Mad Skills Motocross: ' +
     'tog bort den separata wheelie-mekaniken (specialläge med egen ork-kostnad ' +
     'och maxgräns). Luta fram/bak (↑/↓) fungerar nu HELA TIDEN, både på marken ' +
@@ -817,11 +823,19 @@ function update(dt){
 
   // Trampanimation - snabbare fart = snabbare pedaltakt. Nästan still =
   // långsam "vänteposition"-växling istället för helt fryst.
-  const speedForAnim = Math.max(40, Math.abs(state.vx));
-  animTimer += dt * (speedForAnim / 130);
-  if (animTimer > 1){
-    animTimer -= 1;
-    animFrame = (animFrame + 1) % bikeFrames.length;
+  // Trampanimation - bara när cykeln faktiskt rör sig med rimlig fart.
+  // Tidigare fortsatte den "trampa" även helt still, vilket gav ett
+  // konstant vickande/flimrande intryck. Nu fryser den på en bildruta
+  // i vila istället.
+  if (Math.abs(state.vx) > 25){
+    animTimer += dt * (Math.abs(state.vx) / 160);
+    if (animTimer > 1){
+      animTimer -= 1;
+      animFrame = (animFrame + 1) % bikeFrames.length;
+    }
+  } else {
+    animTimer = 0;
+    animFrame = 0;
   }
 
   camX = state.x - innerWidth*0.35;
@@ -1034,7 +1048,10 @@ function render(){
   if (!state.crashed){
     ctx.rotate(state.angle);
     const frame = bikeFrames[animFrame];
-    if (frame.complete) ctx.drawImage(frame, -frame.width/2, BIKE_FRAME_GROUND_OFFSET[animFrame]);
+    // Fast center-referens (inte frame.width/2) så att de små
+    // breddskillnaderna mellan framesen (91-93px) inte ger en osynlig men
+    // märkbar sidledes vickning när animationen byter bildruta
+    if (frame.complete) ctx.drawImage(frame, -46, BIKE_FRAME_GROUND_OFFSET[animFrame]);
   } else {
     if (crashImg.complete) ctx.drawImage(crashImg, -crashImg.width/2, -74);
   }
